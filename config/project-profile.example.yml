@@ -1,0 +1,44 @@
+# 项目档案示例（machine-readable）
+#
+# 本文件是 templates/project-profile.md 的机器可读副本：字段语义以该模板为唯一来源，
+# 本文件只负责给脚本读取。复制到目标项目的配置目录后改名，
+# 把每个占位值替换为实测值；没有实测的一律写 unverified，不要猜。
+
+schema: 1
+project:
+  name: "{{project.name}}"
+  stack: unverified
+  packageManager: unverified
+  mainBranch: unverified
+
+commands:
+  verify: "{{command:verify}}"
+  test: "{{command:test}}"
+  build: "{{command:build}}"
+  e2e: "{{command:e2e}}"
+
+docs:
+  root: "{{doc:root}}"
+  index: "{{doc:index}}"
+  decisionLog: "{{doc:decision-log}}"
+  status: "{{doc:status}}"
+
+roles:
+  approver: "{{role:approver}}"
+  owner: "{{role:owner}}"
+
+evidence:
+  ttl: "{{evidence:ttl}}"
+  levels: unverified        # 项目自己的验收分级定义
+  proxySignoff: false       # 是否允许代理签认；默认 false，只允许显式策略
+
+forbidden:
+  - 改测试 / 判据 / 门禁配置来让红灯变绿
+  - 未授权的数据操作
+  - 读取或打印凭据
+  - 把未验证写成已验证
+
+gaps:
+  - item: unverified
+    impact: unverified
+    handling: 降级为「未验证」，不编造

@@ -1,0 +1,388 @@
+{
+  "schemaVersion": 1,
+  "generator": "scripts/gen-sources-lock.mjs",
+  "docsRoot": "docs",
+  "note": "sha256 由脚本生成，禁止手写；源文档变更后必须重新评审提炼内容再重生成（AUTHORING §8）。",
+  "files": [
+    {
+      "path": "docs/00_入口_文档总索引.md",
+      "sha256": "056cfe13199d3b1c804c4120daa59d6289115a8a373abccff046dbfa6a2101a3",
+      "lifecycle": "active",
+      "disposition": "method",
+      "targets": [
+        "methods/truth-and-lifecycle.md",
+        "templates/docs-index.md"
+      ],
+      "note": "提炼「唯一索引 + 四层分类 + 性质标注」的索引方法；索引条目表与项目文件名不迁移。"
+    },
+    {
+      "path": "docs/01_入口_项目状态看板.md",
+      "sha256": "65acd7b19917a8fe620414b8fa92a631c699dff68e2dacc3a050ee7b83f2a02f",
+      "lifecycle": "active",
+      "disposition": "evidence",
+      "targets": [
+        "templates/status-dashboard.md"
+      ],
+      "note": "看板是事实源的投影而非独立真相：只作「事实源分权」的例证，不迁移表格与进度数字。"
+    },
+    {
+      "path": "docs/02_入口_决策登记.md",
+      "sha256": "a7336bd2d018003293aa14b6e19ecec6a2ce4df7e3202e45cb6e37b4aafe6c96",
+      "lifecycle": "active",
+      "disposition": "method",
+      "targets": [
+        "methods/intake-and-decision.md",
+        "templates/decision-record.md"
+      ],
+      "note": "提炼 DEC/OPEN 唯一编号台账与「先登记决策再改码」机制；具体 DEC 条目留源文档。"
+    },
+    {
+      "path": "docs/03_入口_不做清单.md",
+      "sha256": "11bd814ef9cce7830587b871b98e4ff4d0c488ee23423168ba24fb3a87e3be82",
+      "lifecycle": "active",
+      "disposition": "method",
+      "targets": [
+        "methods/intake-and-decision.md",
+        "templates/open-item.md"
+      ],
+      "note": "提炼「显式不做清单 + 与待办互斥、不得双重记账」的范围治理规则。"
+    },
+    {
+      "path": "docs/04_入口_待裁决台账.md",
+      "sha256": "de56a2eaeea833a791b53f4c27c735f9f033cbf36a629dd887c4d09c092e174b",
+      "lifecycle": "active",
+      "disposition": "method",
+      "targets": [
+        "methods/intake-and-decision.md",
+        "templates/open-item.md"
+      ],
+      "note": "提炼待裁决队列与「决策只在一个队列里收口」的分权机制。"
+    },
+    {
+      "path": "docs/05_入口_文档生命周期登记.md",
+      "sha256": "63b20ffb3ec38077fbf1a575310ad50ad9b28a50c966c6079b513a688e2ff211",
+      "lifecycle": "active",
+      "disposition": "method",
+      "targets": [
+        "methods/truth-and-lifecycle.md",
+        "templates/docs-index.md"
+      ],
+      "note": "提炼生命周期元数据登记与「扫描面变更必须留痕」的口径变更纪律；四套口径差异作案例素材。"
+    },
+    {
+      "path": "docs/10_功能_市场调研.md",
+      "sha256": "980d1dfe64010f90ede5bea6cea1f547d06a9436d2f44186429ccca8dbbba908",
+      "lifecycle": "active",
+      "disposition": "evidence",
+      "targets": [],
+      "note": "竞品与领域调研只作领域适配证据，含真实产品名，不迁移入包。"
+    },
+    {
+      "path": "docs/11_功能_产品需求PRD.md",
+      "sha256": "299cba780a8ed5cdb0186e17e14d0d475e9278ba0096c0ab7e083584c457c33c",
+      "lifecycle": "active",
+      "disposition": "evidence",
+      "targets": [],
+      "note": "PRD 骨架（矩阵 / 优先级 / 用户故事）作为需求方法的素材；骨架未入包，目标模板待补。"
+    },
+    {
+      "path": "docs/12_功能_界面交互设计.md",
+      "sha256": "4946ec57f2745e45b7b007a8dbe2dfa79085d3a79920248580451c10d12ed579",
+      "lifecycle": "active",
+      "disposition": "evidence",
+      "targets": [],
+      "note": "界面分区与交互约定只作领域适配素材；界面模板未入包（产品专属内容不强行通用化）。"
+    },
+    {
+      "path": "docs/13_功能_使用指南.md",
+      "sha256": "5d04fadea000a15563d9c272d69718bff64675d8beca304af558e452302e5f99",
+      "lifecycle": "active",
+      "disposition": "not-migrate",
+      "targets": [],
+      "note": "产品专属使用流程，通用化会失真：不迁移，仅作领域理解材料。"
+    },
+    {
+      "path": "docs/14_功能_已知限制与方案.md",
+      "sha256": "7a8c07b8cf79dd7baa32bde938c4ab585cc2f0da1131b6051763483364ec5811",
+      "lifecycle": "active",
+      "disposition": "method",
+      "targets": [
+        "methods/evidence-and-acceptance.md"
+      ],
+      "note": "「已知限制」四要素（限制 / 用户可感知影响 / 方案 / 残余风险）进入证据与验收方法的判据；不单独建模板。"
+    },
+    {
+      "path": "docs/15_功能_剩余问题.md",
+      "sha256": "f6840f80d940161beb8324bcddea13a0164defca9b6773f12b5f21840338b26d",
+      "lifecycle": "active",
+      "disposition": "method",
+      "targets": [
+        "methods/evidence-and-acceptance.md",
+        "templates/status-dashboard.md"
+      ],
+      "note": "提炼剩余问题分级与处置优先级方法；附录原文属证据，只登记不迁移。"
+    },
+    {
+      "path": "docs/16_功能_技能自动调用计划.md",
+      "sha256": "b66d6b41d3e98fa1846faea4771818a82714a8555004a9380d42a14b62f05f03",
+      "lifecycle": "active",
+      "disposition": "evidence",
+      "targets": [],
+      "note": "技能自动调用判据已落为总控技能的阶段路由与调用权限（3 个可自动、2 个仅显式）；无独立方法资产。"
+    },
+    {
+      "path": "docs/17_功能_下一步工作清单.md",
+      "sha256": "27b6144a455672048d4d35d256c342109582d34c89a4ea2d07beb293daebc397",
+      "lifecycle": "active",
+      "disposition": "template",
+      "targets": [
+        "templates/status-dashboard.md"
+      ],
+      "note": "提炼「唯一下一步清单」模板：北极星 / 优先序 / 裁决项三栏。"
+    },
+    {
+      "path": "docs/20_架构_系统架构.md",
+      "sha256": "ee873a0eba8b10dd8ca5c691d97e86b229b032fb34242c72af181fe573f65660",
+      "lifecycle": "active",
+      "disposition": "template",
+      "targets": [
+        "methods/design-and-invariants.md",
+        "templates/adr.md"
+      ],
+      "note": "提炼系统架构说明书模板（选型 BOM / 数据模型 / 安全模型），删除本项目技术栈结论。"
+    },
+    {
+      "path": "docs/21_架构_顶层设计.md",
+      "sha256": "e8006a2b55fa1860d7e89c7ec2c483db05f81a406c9374a5ea463702133094f9",
+      "lifecycle": "active",
+      "disposition": "template",
+      "targets": [
+        "methods/design-and-invariants.md",
+        "templates/adr.md"
+      ],
+      "note": "提炼顶层设计模板（架构图 / 关键流程 / API 清单 / 术语表）；附录提示词工厂原文不迁移。"
+    },
+    {
+      "path": "docs/22_架构_部署运维手册.md",
+      "sha256": "b569d2bfd2a09490c6856c87c66a55ba6b077040ec0a00643c7db3c4572041a6",
+      "lifecycle": "active",
+      "disposition": "evidence",
+      "targets": [],
+      "note": "运维步骤与备份/升级要点作为运维方法素材；运维模板未入包（首批不含运维技能）。"
+    },
+    {
+      "path": "docs/23_架构_共用构件指南.md",
+      "sha256": "6dbbe720b41fb715f4b93909f547c0acc1e84301055728254c921840c9721176",
+      "lifecycle": "active",
+      "disposition": "method",
+      "targets": [
+        "methods/design-and-invariants.md"
+      ],
+      "note": "提炼「共用构件优先、禁止各切片重复造轮子」的复用判定方法与守卫思路。"
+    },
+    {
+      "path": "docs/24_架构_ADR收据原子性.md",
+      "sha256": "cc34145004c69be0464ff7b3def2af3c47edd556c87609149d4d4298f5eb80ad",
+      "lifecycle": "active",
+      "disposition": "template",
+      "targets": [
+        "templates/adr.md"
+      ],
+      "note": "收据原子性的取舍结构进入 ADR 模板的「收据」字段；具体表名与路由不迁移。"
+    },
+    {
+      "path": "docs/25_架构_不变量守卫.md",
+      "sha256": "d78600c0c3db2a9104c27e708c95372698b8d01d3215d6318b651f06393a18c9",
+      "lifecycle": "active",
+      "disposition": "method",
+      "targets": [
+        "methods/design-and-invariants.md",
+        "cases/false-green-guard/case.md"
+      ],
+      "note": "提炼不变量守卫方法：守什么、假绿风险点、变异验证怎么做。"
+    },
+    {
+      "path": "docs/30_验收_项目验收手册.md",
+      "sha256": "6c51ca8877346ee1533fd6bfaa43f9a42b75343705b776379dbe11186e565b29",
+      "lifecycle": "active",
+      "disposition": "template",
+      "targets": [
+        "methods/evidence-and-acceptance.md",
+        "templates/verification-report.md"
+      ],
+      "note": "提炼验收手册模板（四级定义 / 判定门控 / 范围红线），保留判据结构，删除带时点状态快照。"
+    },
+    {
+      "path": "docs/31_验收_WBS拆解明细.md",
+      "sha256": "8bdd01d52f2fa720921661d8570ad1ca8a0cce621711175a856aa81a2bfe765f",
+      "lifecycle": "active",
+      "disposition": "template",
+      "targets": [
+        "templates/wbs-acceptance.md"
+      ],
+      "note": "提炼 WBS 拆解模板（前端 / 后端 / 连通性三线逐条验收），删除条目数字与工时。"
+    },
+    {
+      "path": "docs/32_验收_交付就绪度.md",
+      "sha256": "b959e4843479777eb41ac15c4674895650093cf9ad77290e440ebba850681909",
+      "lifecycle": "active",
+      "disposition": "template",
+      "targets": [
+        "templates/verification-report.md"
+      ],
+      "note": "提炼交付就绪清单模板（复跑表 / 收口审计），删除具体交付结论与百分比。"
+    },
+    {
+      "path": "docs/33_验收_问题看板.md",
+      "sha256": "053f5a53ea3baa6cbda738c25662c03c8dc76450d08d7b78cc5b211df346601e",
+      "lifecycle": "active",
+      "disposition": "template",
+      "targets": [
+        "templates/open-item.md"
+      ],
+      "note": "提炼问题看板模板（P0/P1/P2 + 证据 + 决策人 + 残余风险转出）。"
+    },
+    {
+      "path": "docs/34_验收_开发模式手册.md",
+      "sha256": "35d185000492149ed651a7fa86a56573976ad81a33b7a0b3905227feb2baf9c8",
+      "lifecycle": "active",
+      "disposition": "method",
+      "targets": [
+        "methods/intake-and-decision.md",
+        "methods/evidence-and-acceptance.md",
+        "templates/verification-report.md"
+      ],
+      "note": "本插件的直接母本：提炼六阶段 / 门禁矩阵 / 人签清单为方法；带时点基线的数字不迁移。"
+    },
+    {
+      "path": "docs/40_历史_修复进展.md",
+      "sha256": "527e081c417c9c1d2694be938c071c872bedaf0b9cb4792a2d33af0666cebff4",
+      "lifecycle": "historical",
+      "disposition": "method",
+      "targets": [
+        "methods/history-and-cases.md"
+      ],
+      "note": "按轮次的修复进展提炼「历史沉淀」方法与案例结构；原始数字与结论只留源文档。"
+    },
+    {
+      "path": "docs/41_历史_交付日志.md",
+      "sha256": "2cfa1a73ac778f52d40993a75d3bd95fed3b52dffe75e363152c33af3b44b787",
+      "lifecycle": "historical",
+      "disposition": "not-migrate",
+      "targets": [],
+      "note": "纯时间线留痕，对方法与模板无提炼价值：不迁移。"
+    },
+    {
+      "path": "docs/42_历史_技术债计划.md",
+      "sha256": "e58a9dc6f18779de14111664e1d7f4c42121012ce75919c8a5fbd91e2e59150e",
+      "lifecycle": "historical",
+      "disposition": "case",
+      "targets": [
+        "cases/false-green-guard/case.md"
+      ],
+      "note": "技术债计划 + 执行 + 变异测试总表：提炼技术债排序与守卫验证案例。"
+    },
+    {
+      "path": "docs/43_历史_副驾缓存优化.md",
+      "sha256": "7f1f5e775a8f544907e5abefe852a42874e437db592aa32915c8d26ba3b35e77",
+      "lifecycle": "historical",
+      "disposition": "evidence",
+      "targets": [],
+      "note": "性能与成本权衡要点仅作素材（含供应商信息，需脱敏后才能成案例）；案例未入包。"
+    },
+    {
+      "path": "docs/44_历史_文风对齐方案.md",
+      "sha256": "c67ec65e5d0eb2bef2c7c1c5038ba963bb119c9ae6c6944801d18a0581b2d674",
+      "lifecycle": "historical",
+      "disposition": "evidence",
+      "targets": [],
+      "note": "风格收敛的阶段性取舍只作素材；案例未入包，避免把未完成方案写成通用方法。"
+    },
+    {
+      "path": "docs/45_历史_工期估算.md",
+      "sha256": "a0595e2dfa8ff76dce7f3f20ea90decd947864d94f68024f70df2925cac34067",
+      "lifecycle": "historical",
+      "disposition": "not-migrate",
+      "targets": [],
+      "note": "工期估算绑定当时范围与口径，外推即失真：不迁移，仅作估算偏差证据。"
+    },
+    {
+      "path": "docs/46_历史_浏览器实测问题.md",
+      "sha256": "14180ece6bc60a4dc5d26a8b3f0232e89a9133fd149946e33588bed9d95e682a",
+      "lifecycle": "historical",
+      "disposition": "case",
+      "targets": [
+        "cases/false-green-guard/case.md",
+        "methods/evidence-and-acceptance.md"
+      ],
+      "note": "「实测问题 → 方案 → 进展」闭环：提炼「实测优先于推断」案例。"
+    },
+    {
+      "path": "docs/47_历史_实测留痕合集.md",
+      "sha256": "1227291bd0969c95d6f65e8203bc168bdb8d183c2b5dc957c2563292d7663d70",
+      "lifecycle": "historical",
+      "disposition": "evidence",
+      "targets": [
+        "methods/history-and-cases.md"
+      ],
+      "note": "单次实测留痕只作证据链，脱敏后可供案例引用，不单独成文。"
+    },
+    {
+      "path": "docs/48_历史_参考库三阶段.md",
+      "sha256": "c4d4f25ed0929bb8ffa58ad9330b16fece3e459e958cb3def686ab161008b2e5",
+      "lifecycle": "historical",
+      "disposition": "evidence",
+      "targets": [],
+      "note": "渐进交付与范围控制的取舍只作素材；案例未入包。"
+    },
+    {
+      "path": "docs/49_历史_2026-10轮次快照.md",
+      "sha256": "592adff82d1ee08ee91c5cf5562bd1d5b8e552ca99b23c8caf292fa297256754",
+      "lifecycle": "historical",
+      "disposition": "evidence",
+      "targets": [],
+      "note": "轮次快照合集，只代表当时：仅作证据，不迁移。"
+    },
+    {
+      "path": "docs/50_历史_2026-11文档审计.md",
+      "sha256": "866224a13edc263a6ae2f55b62b5e0f475f1e7826c74c2785e48ac8d2bf1c8b4",
+      "lifecycle": "historical",
+      "disposition": "case",
+      "targets": [
+        "cases/docs-governance/case.md",
+        "methods/truth-and-lifecycle.md"
+      ],
+      "note": "本次文档治理的直接来源：提炼「索引缺失 → 审计 → 登记 → 检查器」治理案例。"
+    },
+    {
+      "path": "docs/51_历史_审计归档合集.md",
+      "sha256": "e3cc04f34464b6e87b5b2b25e0b04d0daf940a455bc4bc489c9729dc77353526",
+      "lifecycle": "archive",
+      "disposition": "not-migrate",
+      "targets": [],
+      "note": "性质=档，审计归档原文仅作证据链，不作为判断依据：不迁移。"
+    },
+    {
+      "path": "docs/52_历史_2026-11-08全量测试报告.md",
+      "sha256": "c01bfe68f7eca5f43422f0bc19ab76cec8f0c156d01ab3aced1cebd928513313",
+      "lifecycle": "historical",
+      "disposition": "evidence",
+      "targets": [
+        "cases/no-go-to-go/case.md",
+        "templates/verification-report.md"
+      ],
+      "note": "全量测试报告含项目数字与缺陷清单，只作证据；结论不外推为通用判据。"
+    },
+    {
+      "path": "docs/53_历史_2026-11-08复测报告.md",
+      "sha256": "409e3bdbe69a865ee3b5efc62f52357adcd7d9d2f21ad1a572445c6fbf5cc75b",
+      "lifecycle": "historical",
+      "disposition": "evidence",
+      "targets": [
+        "cases/no-go-to-go/case.md",
+        "methods/evidence-and-acceptance.md"
+      ],
+      "note": "复测 go/no-go 判定只对当时有效：只作证据，不迁移为验收标准。"
+    }
+  ]
+}

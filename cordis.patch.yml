@@ -1,0 +1,169 @@
+# 项目开发流程插件 · DSH bundle patch（v2）
+#
+# 一个 bundle，一个 preset：`project-dev-flow`。
+# 本文件只声明「模式怎么组成」；方法/模板/案例/技能在 skills/ methods/ templates/ cases/ 中，
+# 由技能按需加载，不进入人格段。
+#
+# 安装：plugin_manager → install_bundle → target = 本目录绝对路径
+# 验证：新开会话 → 模式选择器出现「项目开发流程」→ /project-docs 等技能可调用
+# 卸载：plugin_manager → remove_bundle → @local/dsh-project-dev-flow
+
+- insert:
+    - id: preset-project-dev-flow
+      name: '@deepseek-ai/dsh-agent-preset'
+      config:
+        id: project-dev-flow
+        name: 项目开发流程
+        description: 证据驱动的项目开发流程：先适配项目，再按需求/设计/实现/验证/交付/复盘推进；含文档治理、证据链与人工签认边界。
+        order: 5
+        plugins:
+          - id: persona
+            name: '@deepseek-ai/dsh-persona'
+            config:
+              prefix: |-
+                你是「项目开发流程模式」的执行 agent。你的职责不是替用户做决定，而是按目标项目自己的工程协议推进，并让每个结论都有证据。
+
+                ## 先适配项目（每次进入一个陌生项目都先做）
+                1. 只读检查：package.json scripts、CI、测试入口、文档根目录、决策/验收类文档、AGENTS.md、项目自有 .dsh/skills 与 .agents/skills。
+                2. 归纳「项目 profile」：验证命令、文档映射、决策人角色、验收判据、证据有效期、禁用操作。经用户同意后才写入项目。
+                3. 找不到的命令一律标「未验证」，禁止照搬本插件或其他项目的命令、路径与门禁。
+                4. 项目规则优先：项目手册与同名技能覆盖本插件缺省值；本插件方法是 fallback。
+
+                ## 事实源按字段分权（不要追问「谁是唯一真相」）
+                - 当前实现、数字、覆盖率 → 代码与当场命令输出
+                - 范围、契约、判据变更 → 人类授权的 DEC / ADR
+                - 单项验收状态 → 验收行 + 同一 commit 的证据
+                - 进度看板 → 上述来源的投影，不是独立事实源
+                - 本插件方法 → 缺省 fallback
+                - 历史 / 归档文档 → 只讲当时，不参与当前判定
+
+                ## 流程：0 适配 + 六阶段（1–6）
+                0 适配 → project-dev-flow｜1 需求受理 → project-intake｜2 设计定型 → project-dev-flow
+                3 实现（先写会失败的用例再实现）｜文档治理 → project-docs
+                4 验证 / 5 交付：技能 project-acceptance 仅用户显式调用（`/project-acceptance`）；未调用时按 methods/evidence-and-acceptance.md 的判据执行，并标注「技能未加载」
+                6 复盘沉淀：技能 project-case-distill 仅用户显式调用（`/project-case-distill`）；未调用时按 methods/history-and-cases.md 执行
+
+                ## 不可退让
+                1. 没跑验证不说完成；每条「通过」= 命令 + exit code + commit。
+                2. 不改测试、判据、CI、守卫来让红灯变绿。
+                3. 新能力、契约、数据、判据、范围变化：先登记决策再改码。
+                4. 不擅自做数据操作；不读取、不打印凭据。
+                5. 不把降级结果说成真实产出；来源标记如实。
+                6. 人工签认不可代签；agent 只能起草，签认由人类授权者完成。
+
+                ## 交付口径
+                结论先行 → 证据（路径 / 命令 / exit code / commit）→ 未执行项写「计划，未跑」→ 人工签认项单列。
+                禁止自称「100% 完成」，只写「候选完成 + 证据链 + 剩余风险」。
+          - id: agent-instructions
+            name: '@deepseek-ai/dsh-agent-instructions'
+            config:
+              maxBytes: 65536
+          - id: time-context
+            name: '@deepseek-ai/dsh-time-context'
+          - id: tool-bash
+            name: '@deepseek-ai/dsh-tool-bash'
+            disabled: !!js process.platform === 'win32'
+          - id: tool-pwsh
+            name: '@deepseek-ai/dsh-tool-pwsh'
+            disabled: !!js process.platform !== 'win32'
+          - id: tool-fs
+            name: '@deepseek-ai/dsh-tool-fs'
+            config:
+              applyPatch: false
+          - id: tool-fs-search
+            name: '@deepseek-ai/dsh-tool-fs-search'
+            config:
+              sampleOverCapGlobResults: false
+          - id: tool-jobs
+            name: '@deepseek-ai/dsh-tool-jobs'
+          - id: tool-schedule
+            name: '@deepseek-ai/dsh-tool-schedule'
+          # 包内技能目录按 rank 300（custom）挂载；项目 .dsh/skills / .agents/skills 仍优先。
+          - id: skill-filesystem
+            name: '@deepseek-ai/dsh-skill-filesystem'
+            config:
+              customSkillDirs:
+                - !!js process.getBuiltinModule('node:path').join(process.getBuiltinModule('node:path').dirname(process.getBuiltinModule('node:module').createRequire(baseUrl).resolve('@local/dsh-project-dev-flow/package.json')), 'skills')
+          - id: tool-skill
+            name: '@deepseek-ai/dsh-tool-skill'
+          - id: command-goal
+            name: '@deepseek-ai/dsh-command-goal'
+          - id: tool-goal
+            name: '@deepseek-ai/dsh-tool-goal'
+          - id: planning
+            name: cordis:group
+            group: true
+            isolate:
+              planMode: true
+            config:
+              - id: plan-mode
+                name: '@deepseek-ai/dsh-plan-mode'
+                config:
+                  section: |
+                    You are in plan mode. Stay in plan mode until the user approves your plan through exit_plan_mode or switches the session mode. Imperative language to implement changes means plan the implementation, not execute it. Explore first with non-mutating reads, searches and static checks; do not edit files, run formatters or code generation that rewrites tracked files, commit, or carry out the plan. Do not use todo_write to track this planning phase. Resolve discoverable facts by inspection; use ask_user_question only for user-owned choices or material ambiguity. Make the plan decision-complete: goal, success criteria, changes by subsystem, public API/schema/data-flow impact, edge cases, tests, acceptance criteria and assumptions. When ready, call exit_plan_mode with the complete plan markdown as the only and final tool call in that response.
+
+          - id: compaction
+            name: cordis:group
+            group: true
+            isolate:
+              compaction: true
+              toolResultPruner: true
+            config:
+              - id: compaction-basic
+                name: '@deepseek-ai/dsh-compaction-basic'
+              - id: command-compact
+                name: '@deepseek-ai/dsh-command-compact'
+              - id: tool-result-pruner
+                name: '@deepseek-ai/dsh-compaction-tool-result-pruner'
+                config:
+                  thresholdChars: 8192
+                  headChars: 4096
+                  tailChars: 1024
+          - id: delegation
+            name: cordis:group
+            group: true
+            isolate:
+              workflowEngine: true
+            config:
+              - id: tool-subagent-control
+                name: '@deepseek-ai/dsh-tool-subagent-control'
+                config:
+                  interrupt: false
+              - id: tool-subagent
+                name: '@deepseek-ai/dsh-tool-subagent'
+                config:
+                  provider: spawn
+                  toolName: subagent
+                  modelSelection: true
+                  modelDiscovery: true
+              - id: tool-subagent-fork
+                name: '@deepseek-ai/dsh-tool-subagent'
+                config:
+                  provider: fork
+                  toolName: subagent_fork
+              - id: workflow-ptc
+                name: '@deepseek-ai/dsh-workflow-ptc'
+                config:
+                  provider: spawn
+              - id: tool-workflow
+                name: '@deepseek-ai/dsh-tool-workflow'
+          - id: tool-ask-user
+            name: '@deepseek-ai/dsh-tool-ask-user'
+          - id: tool-todo
+            name: '@deepseek-ai/dsh-tool-todo'
+            config:
+              allowParallelInProgress: true
+          - id: tool-web
+            name: '@deepseek-ai/dsh-tool-web'
+            config:
+              fetch: true
+              searchTimeoutMs: 60000
+          - id: present
+            name: '@deepseek-ai/dsh-tool-present'
+          # 治理：模式不得自行装卸插件改写宿主 profile，装/卸必须由人在 Plugins 面板操作。
+          - id: tool-plugin-manager
+            name: '@deepseek-ai/dsh-plugin-manager/tools'
+            disabled: true
+          - id: tool-plugin-market
+            name: '@deepseek-ai/dsh-plugin-market/tools'
+            disabled: true

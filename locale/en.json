@@ -1,0 +1,7 @@
+{
+  "meta": {
+    "title": "Project Development Flow",
+    "description": "Adds a \"Project Development Flow\" mode to the session picker: adapt to the project first, then move through intake, design, implementation, verification, delivery and retrospective, with evidence for every conclusion and human sign-off kept human. Verification and case distilling run only when you invoke their slash commands.",
+    "detail": "detail/DETAIL.md"
+  }
+}

@@ -1,0 +1,56 @@
+{
+  "name": "@local/dsh-project-dev-flow",
+  "version": "2.0.1",
+  "private": true,
+  "license": "Apache-2.0",
+  "type": "module",
+  "description": "证据驱动的项目开发流程插件：DSH bundle + agent preset + 5 个技能 + 方法/模板/案例资产",
+  "keywords": [
+    "dsh",
+    "dsh-bundle",
+    "agent-preset",
+    "project-workflow",
+    "documentation-governance"
+  ],
+  "exports": {
+    "./package.json": "./package.json",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg"
+  },
+  "files": [
+    "cordis.patch.yml",
+    "skills",
+    "methods",
+    "templates",
+    "cases",
+    "config",
+    "references",
+    "evidence",
+    "scripts",
+    "tests",
+    "locale",
+    "detail",
+    "icon.svg",
+    "sources.lock.json",
+    "README.md",
+    "CHANGELOG.md",
+    "MIGRATION.md",
+    "AUTHORING.md"
+  ],
+  "engines": {
+    "dsh": "0.2.2-rc.3"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "scripts": {
+    "validate": "node scripts/validate-package.mjs",
+    "check:sources": "node scripts/check-sources.mjs",
+    "check:patch": "node scripts/check-patch-yaml.mjs",
+    "gen:sources": "node scripts/gen-sources-lock.mjs",
+    "test": "node --test tests/validate-package.test.mjs tests/check-patch-yaml.test.mjs",
+    "test:source": "node --test tests/source-integration.test.mjs"
+  }
+}

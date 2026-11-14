@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="项目开发流程">
+  <rect width="64" height="64" rx="14" fill="#1f4e79"/>
+  <path d="M18 14h20l8 8v28a2 2 0 0 1-2 2H18a2 2 0 0 1-2-2V16a2 2 0 0 1 2-2z" fill="#f7f9fc"/>
+  <path d="M38 14v8h8" fill="#d6e2f0"/>
+  <g fill="#9fb6cc">
+    <rect x="22" y="26" width="20" height="2.4" rx="1.2"/>
+    <rect x="22" y="32" width="16" height="2.4" rx="1.2"/>
+    <rect x="22" y="38" width="12" height="2.4" rx="1.2"/>
+  </g>
+  <circle cx="43" cy="43" r="11" fill="#2e9e5b"/>
+  <path d="M37.6 43.2l3.6 3.6 7-7.2" stroke="#ffffff" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

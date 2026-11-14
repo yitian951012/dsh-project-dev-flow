@@ -1,0 +1,44 @@
+# 发布排除项。
+#
+# 注意：package.json 已声明 "files" 白名单，npm 打包时以白名单为准，本文件仅在白名单
+# 被移除或改成黑名单模式时才生效。这里只排除垃圾与本地环境，排除项不得包含包内运行
+# 资产（cordis.patch.yml、skills/、methods/、templates/、cases/、references/、config/、
+# evidence/、scripts/、tests/、locale/、detail/、icon.svg、sources.lock.json 与各说明文档）。
+
+node_modules/
+dist/
+build/
+out/
+coverage/
+*.tgz
+*.tar.gz
+
+.env
+.env.*
+!.env.example
+*.local
+*.key
+*.pem
+
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-error.log*
+.pnpm-store/
+.yarn/
+.cache/
+.eslintcache
+.test-cache/
+test-results/
+playwright-report/
+
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+*.tmp
+*.bak
+*.swp
+*.orig
+*~
