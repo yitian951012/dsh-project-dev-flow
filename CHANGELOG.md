@@ -1,5 +1,21 @@
 # CHANGELOG
 
+## 2.0.2 — 2026-11-16
+
+**发布元数据调整：改为 npm 公开包，兼容性改为区间。不改变 preset id、技能、方法、模板与案例。**
+
+### 变更
+
+- 包名由 `@local/dsh-project-dev-flow` 改为公开 scope `@yitian951012/dsh-project-dev-flow`，`private: false`，`publishConfig.access: public`。
+- 补 `repository` / `homepage` / `bugs` 指向 GitHub 仓库；keywords 增加 `dsh-plugin`。
+- `engines.dsh` 由精确版本 `0.2.2-rc.3` 改为兼容区间 `>=0.2.2-rc.1 <0.3.0`：最低适配 `0.2.2-rc.1`，最高适配不含 `0.3.0`。
+
+### 兼容说明
+
+- 区间表示「不因版本号被直接拒绝」，不等于区间内每个版本都实测过；区间内换版本仍需执行 MIGRATION 的验证清单。
+- 低于 `0.2.2-rc.1` 或达到 `0.3.0` 及以上会被版本约束拒绝。
+- preset id `project-dev-flow`、包内技能、调用方式均未变化；已安装的 2.0.1 用户不受影响。
+
 ## 2.0.1 — 2026-11-13
 
 **修正发布：运行时对齐、工具面收敛、校验门禁拆分与面板展示资源补齐。不改变包名、preset id 与技能调用方式。**

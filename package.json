@@ -1,17 +1,29 @@
 {
-  "name": "@local/dsh-project-dev-flow",
-  "version": "2.0.1",
-  "private": true,
+  "name": "@yitian951012/dsh-project-dev-flow",
+  "version": "2.0.2",
+  "private": false,
   "license": "Apache-2.0",
   "type": "module",
   "description": "证据驱动的项目开发流程插件：DSH bundle + agent preset + 5 个技能 + 方法/模板/案例资产",
   "keywords": [
     "dsh",
     "dsh-bundle",
+    "dsh-plugin",
     "agent-preset",
     "project-workflow",
     "documentation-governance"
   ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yitian951012/dsh-project-dev-flow.git"
+  },
+  "homepage": "https://github.com/yitian951012/dsh-project-dev-flow#readme",
+  "bugs": {
+    "url": "https://github.com/yitian951012/dsh-project-dev-flow/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "exports": {
     "./package.json": "./package.json",
     "./locale/*.json": "./locale/*.json",
@@ -38,7 +50,7 @@
     "AUTHORING.md"
   ],
   "engines": {
-    "dsh": "0.2.2-rc.3"
+    "dsh": ">=0.2.2-rc.1 <0.3.0"
   },
   "dsh": {
     "bundle": {

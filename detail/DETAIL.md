@@ -8,7 +8,12 @@
 
 ## 安装
 
-**前置条件**：DSH `0.2.2-rc.3`（精确版本）。换用其它版本前，先在目标运行时重新验证，见包根 `MIGRATION.md`。
+**前置条件**：DSH 版本区间 `>=0.2.2-rc.1 <0.3.0`。本包在 `0.2.2-rc.3` 上完成校验；区间内换版本前，先在目标运行时重新验证，见包根 `MIGRATION.md`。
+
+安装方式：
+
+- npm 包：`dsh plugin --profile <profile> add @yitian951012/dsh-project-dev-flow`
+- GitHub 源：`dsh plugin --profile <profile> add github:yitian951012/dsh-project-dev-flow`
 
 1. 在 DSH 的 Plugins 面板中以 bundle 安装方式选择本包目录。
 2. 安装后新开一个会话——已有会话保留启动时的模式，不会热切换。

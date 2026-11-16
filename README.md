@@ -27,7 +27,7 @@
 ```text
 dsh-project-dev-flow/
 ├── cordis.patch.yml          # bundle patch：一个 preset + 工具面 + 包内技能目录
-├── package.json              # dsh.bundle.patch + engines.dsh（精确版本）
+├── package.json              # dsh.bundle.patch + engines.dsh（兼容区间）
 ├── icon.svg                  # 插件图标（Plugins 面板与详情页使用）
 ├── locale/                   # 面板显示文案（不进入会话上下文）
 │   ├── zh.json               # meta.title / meta.description / meta.detail
@@ -61,13 +61,13 @@ dsh-project-dev-flow/
 
 ## 3. 安装
 
-**前置条件**：DSH `0.2.2-rc.3`（精确版本）。其它版本需在目标运行时重新验证，见 [MIGRATION.md](MIGRATION.md)。
+**前置条件**：DSH 版本区间 `>=0.2.2-rc.1 <0.3.0`（最低适配 `0.2.2-rc.1`，最高适配不含 `0.3.0`）。本包在 `0.2.2-rc.3` 上完成校验；换用区间内其它版本前，先在目标运行时走一遍 [MIGRATION.md](MIGRATION.md) 的验证清单。
 
 在 DSH 的 Plugins 面板中安装本目录（bundle 安装，选择本包所在目录）。
 安装后**新开一个会话**，在模式选择器中选择「项目开发流程」。
 已存在的会话保留启动时的 preset，不会热切换。
 
-升级：先移除旧包再安装新包；若以后以 registry 方式发布（需先去掉 `private` 与本地包名），才可通过 registry 更新流程。
+升级：先移除旧包再安装新包。npm 包发布后也可直接安装：`dsh plugin --profile <profile> add @yitian951012/dsh-project-dev-flow`。
 卸载：移除 bundle；包内技能与 preset 一并消失，项目自己的 `.dsh/skills`、`.agents/skills` 不受影响。
 面板中的标题、描述与详情页来自 `locale/`、`detail/`、`icon.svg`，不需要启用插件即可查看。
 
