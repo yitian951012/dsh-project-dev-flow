@@ -98,6 +98,11 @@ disable-model-invocation: false
 | `{{evidence:ttl}}` | 证据有效期 |
 
 找不到对应值时，输出「未配置」并进入「未验证」模式，**不得编造命令**。
+> **注意（2.1.0 起）**：`{{…}}` 只对 methods / templates / skills 的**正文**有效（模型读到的是字面量）。
+> `cordis.patch.yml` 的 prompt 段（persona `prefix`/`suffix`、plan-mode `section`）由宿主求值，
+> 那里写 `{{…}}` 会让 preset 装配直接失败（`malformed prompt variable reference`）。
+> patch 里一律用 `doc:index` / `command:test` / `role:approver` 这种不带花括号的写法；
+> 门禁为 `PATCH-PROMPT-PLACEHOLDER`（`npm run check:patch` 与 `npm run validate` 两处都会拦截）。
 
 ---
 
