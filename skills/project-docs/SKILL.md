@@ -1,6 +1,6 @@
 ---
 name: project-docs
-description: 项目文档治理：把项目文档落地成唯一索引 + 活/史/档三态 + 生命周期登记，并审计漂移、断链与重复结论。
+description: 项目文档治理：需要整理、审计、迁移或合并项目文档，或文档与代码开始漂移、索引出现断链时使用。
 whenToUse: 用户要求整理、审计、迁移、合并项目文档，或文档与代码开始漂移、索引出现断链时。
 disable-model-invocation: false
 ---
@@ -21,7 +21,7 @@ disable-model-invocation: false
 
 ## 步骤
 
-1. 先加载 `../../methods/truth-and-lifecycle.md`；层级判定细则见 `references/doc-lifecycle-map.md`，归属或层级变更需登记时按 `../../methods/intake-and-decision.md`。
+1. 方法按节读：`node <技能base>/../../scripts/section.mjs truth-and-lifecycle 2 3`（不要用读文件工具整份读，同一文件本会话不重复读）；层级判定细则见 `references/doc-lifecycle-map.md`，归属或层级变更需登记时用同法读 `intake-and-decision` 的 §3。
 2. 建清单：逐个记录用途、owner、最后复核日期、被谁引用；无 owner 的文档单列。
 3. 归三态：活（可作为当前判定依据）/ 史（只讲当时）/ 档（仅溯源）；判定表见 references。
 4. 立唯一索引：{{doc:index}} 每行 = 文档 + 性质（活/史/档）+ 定位 + owner + 复核到期日；同一结论只允许一个归属。列名以 `../../templates/docs-index.md` 为准。

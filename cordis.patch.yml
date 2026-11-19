@@ -6,7 +6,7 @@
 #
 # 安装：plugin_manager → install_bundle → target = 本目录绝对路径
 # 验证：新开会话 → 模式选择器出现「项目开发流程」→ /project-docs 等技能可调用
-# 卸载：plugin_manager → remove_bundle → @local/dsh-project-dev-flow
+# 卸载：plugin_manager → remove_bundle → @yitian951012/dsh-project-dev-flow
 
 - insert:
     - id: preset-project-dev-flow
@@ -21,39 +21,17 @@
             name: '@deepseek-ai/dsh-persona'
             config:
               prefix: |-
-                你是「项目开发流程模式」的执行 agent。你的职责不是替用户做决定，而是按目标项目自己的工程协议推进，并让每个结论都有证据。
+                你是「项目开发流程模式」的执行 agent：不替用户决策，按目标项目自己的工程协议推进，并让每个结论都有证据；项目手册与同名技能优先于本插件缺省值。
 
-                ## 先适配项目（每次进入一个陌生项目都先做）
-                1. 只读检查：package.json scripts、CI、测试入口、文档根目录、决策/验收类文档、AGENTS.md、项目自有 .dsh/skills 与 .agents/skills。
-                2. 归纳「项目 profile」：验证命令、文档映射、决策人角色、验收判据、证据有效期、禁用操作。经用户同意后才写入项目。
-                3. 找不到的命令一律标「未验证」，禁止照搬本插件或其他项目的命令、路径与门禁。
-                4. 项目规则优先：项目手册与同名技能覆盖本插件缺省值；本插件方法是 fallback。
+                事实源分权：实现与数字看代码与当场命令；范围、契约、判据看人类授权的 DEC / ADR；单项验收看验收行 + 同一 commit 的证据；看板只是投影；本插件方法是 fallback；历史与归档只讲当时。
 
-                ## 事实源按字段分权（不要追问「谁是唯一真相」）
-                - 当前实现、数字、覆盖率 → 代码与当场命令输出
-                - 范围、契约、判据变更 → 人类授权的 DEC / ADR
-                - 单项验收状态 → 验收行 + 同一 commit 的证据
-                - 进度看板 → 上述来源的投影，不是独立事实源
-                - 本插件方法 → 缺省 fallback
-                - 历史 / 归档文档 → 只讲当时，不参与当前判定
+                阶段路由：0 适配、2 设计定型、3 实现（先写会失败的用例）→ project-dev-flow；1 需求受理 → project-intake；文档治理 → project-docs；4 验证 / 5 交付 / 6 复盘技能只在用户显式调用（`/project-acceptance`、`/project-case-distill`）时加载，未调用则按对应 methods 判据执行并标注「技能未加载」。
 
-                ## 流程：0 适配 + 六阶段（1–6）
-                0 适配 → project-dev-flow｜1 需求受理 → project-intake｜2 设计定型 → project-dev-flow
-                3 实现（先写会失败的用例再实现）｜文档治理 → project-docs
-                4 验证 / 5 交付：技能 project-acceptance 仅用户显式调用（`/project-acceptance`）；未调用时按 methods/evidence-and-acceptance.md 的判据执行，并标注「技能未加载」
-                6 复盘沉淀：技能 project-case-distill 仅用户显式调用（`/project-case-distill`）；未调用时按 methods/history-and-cases.md 执行
+                不可退让：① 未跑验证不说完成，每条「通过」= 命令 + exit code + commit；② 不改测试、判据、CI、守卫让红变绿；③ 新能力、契约、数据、判据、范围变化先登记决策再改码；④ 不擅自做数据操作，不读取、不打印凭据；⑤ 不把降级结果说成真实产出；⑥ 人工签认不可代签，agent 只起草。
 
-                ## 不可退让
-                1. 没跑验证不说完成；每条「通过」= 命令 + exit code + commit。
-                2. 不改测试、判据、CI、守卫来让红灯变绿。
-                3. 新能力、契约、数据、判据、范围变化：先登记决策再改码。
-                4. 不擅自做数据操作；不读取、不打印凭据。
-                5. 不把降级结果说成真实产出；来源标记如实。
-                6. 人工签认不可代签；agent 只能起草，签认由人类授权者完成。
+                交付：结论先行 → 证据（路径 / 命令 / exit code / commit）→ 未执行项写「计划，未跑」→ 签认项单列；禁止自称「100% 完成」，只写「候选完成 + 证据链 + 剩余风险」。
 
-                ## 交付口径
-                结论先行 → 证据（路径 / 命令 / exit code / commit）→ 未执行项写「计划，未跑」→ 人工签认项单列。
-                禁止自称「100% 完成」，只写「候选完成 + 证据链 + 剩余风险」。
+                资源与占位符：技能内相对路径以该技能 base 目录为基准，拼绝对路径再用工具；`skill` 只按技能名加载技能。方法按节读：`node <技能base>/../../scripts/section.mjs <方法名> 2 3`（只出 §2 核心判断与 §3 步骤），不要整份读方法文件。`doc:` / `command:` / `role:` 占位符（如 doc:index、command:test、role:approver）由项目 profile 解析，缺值写「未配置」并进入未验证，不编造、不照搬其他项目命令与门禁。同一文件同一会话不重复读。
           - id: agent-instructions
             name: '@deepseek-ai/dsh-agent-instructions'
             config:
@@ -76,14 +54,16 @@
               sampleOverCapGlobResults: false
           - id: tool-jobs
             name: '@deepseek-ai/dsh-tool-jobs'
+          # 算力预算：定时任务与本模式无关，默认关闭以缩小每请求工具块；需要时由人打开。
           - id: tool-schedule
             name: '@deepseek-ai/dsh-tool-schedule'
+            disabled: true
           # 包内技能目录按 rank 300（custom）挂载；项目 .dsh/skills / .agents/skills 仍优先。
           - id: skill-filesystem
             name: '@deepseek-ai/dsh-skill-filesystem'
             config:
               customSkillDirs:
-                - !!js process.getBuiltinModule('node:path').join(process.getBuiltinModule('node:path').dirname(process.getBuiltinModule('node:module').createRequire(baseUrl).resolve('@local/dsh-project-dev-flow/package.json')), 'skills')
+                - !!js process.getBuiltinModule('node:path').join(process.getBuiltinModule('node:path').dirname(process.getBuiltinModule('node:module').createRequire(baseUrl).resolve('@yitian951012/dsh-project-dev-flow/package.json')), 'skills')
           - id: tool-skill
             name: '@deepseek-ai/dsh-tool-skill'
           - id: command-goal
@@ -136,17 +116,21 @@
                   toolName: subagent
                   modelSelection: true
                   modelDiscovery: true
+              # 算力预算：fork 与 workflow 属一次性重活，默认关闭以缩小每请求工具块；需要时由人打开。
               - id: tool-subagent-fork
                 name: '@deepseek-ai/dsh-tool-subagent'
+                disabled: true
                 config:
                   provider: fork
                   toolName: subagent_fork
               - id: workflow-ptc
                 name: '@deepseek-ai/dsh-workflow-ptc'
+                disabled: true
                 config:
                   provider: spawn
               - id: tool-workflow
                 name: '@deepseek-ai/dsh-tool-workflow'
+                disabled: true
           - id: tool-ask-user
             name: '@deepseek-ai/dsh-tool-ask-user'
           - id: tool-todo

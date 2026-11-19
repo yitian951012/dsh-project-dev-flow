@@ -1,6 +1,6 @@
 ---
 name: project-intake
-description: 需求受理：把口头需求或变更转成含目标、非目标、可执行判据的受理单，先登记决策再进实现，避免范围在实现中扩散。
+description: 需求受理与决策登记：收到新需求、变更请求、缺陷反馈或范围调整，需要判断是否受理、做多大、怎样算做完时使用。
 whenToUse: 收到新需求、变更请求、缺陷反馈或范围调整，需要判断是否受理、做多大、怎样算做完时。
 disable-model-invocation: false
 ---
@@ -21,14 +21,14 @@ disable-model-invocation: false
 
 ## 步骤
 
-1. 先加载 `../../methods/intake-and-decision.md`；判据写法与受理单字段见 `references/intake-checklist.md`。
+1. 方法按节读：`node <技能base>/../../scripts/section.mjs intake-and-decision 2 3`（不要用读文件工具整份读，同一文件本会话不重复读）；判据写法与受理单字段见 `references/intake-checklist.md`。
 2. 原文复述需求，并把「用户说的」与「我推断的」分成两栏；推断项逐条标「待确认」。
 3. 归类：新能力、契约或数据变化、缺陷、纯文档四类之一。
 4. 命中「新能力 / 契约或数据变化 / 判据变化」→ 先登记 {{doc:decision-log}} 并标 {{role:approver}}；未登记不进实现。
 5. 写受理单：字段以 `references/intake-checklist.md` 的九项必填为准（该表即表单，不另设模板），逐项填并在输出里标「缺项」。
 6. 判据必须落到可执行命令（{{command:verify}} / {{command:test}} / {{command:e2e}}）或可观察事实；两者都做不到时写「人工判据 + 判定人」。
 7. 拆最小可交付批次：一个批次只解决一条判据，批次间可独立验证。
-8. 范围外的一律写入不做清单与待裁决项，不在本批内暗中扩；归口与互斥规则见 `../../methods/truth-and-lifecycle.md`，处置流程见 `references/scope-guard.md`。
+8. 范围外的一律写入不做清单与待裁决项，不在本批内暗中扩；已明确不做只记不做清单（写理由与重启条件），尚未决定只记待裁决项，两处不得双重记账；归口规则见 `../../methods/truth-and-lifecycle.md`，互斥规则见 `../../methods/intake-and-decision.md` §3，处置流程见 `references/scope-guard.md`。
 9. 有「待确认」项时只输出提问清单并停下，不自行补全需求。
 
 ## 输出

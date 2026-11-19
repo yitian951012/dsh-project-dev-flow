@@ -1,6 +1,6 @@
 ---
 name: project-acceptance
-description: 验收与交付：逐条判据给出命令 + exit code + 提交的证据行，未跑项单列，签认留给人类授权者，只写候选完成与剩余风险。
+description: 验收与交付：需要逐条判定是否通过、准备验收或交付交接、复核证据是否过期时使用（仅 /project-acceptance 显式调用）。
 whenToUse: 需要判定某项是否通过、准备验收或交付交接、或需要复核已有证据是否过期时。
 disable-model-invocation: true
 ---
@@ -21,7 +21,7 @@ disable-model-invocation: true
 
 ## 步骤
 
-1. 先加载 `../../methods/evidence-and-acceptance.md`；证据要素见 `references/evidence-chain.md`，判据或白名单被动过时按 `../../methods/design-and-invariants.md` 做变异复核。
+1. 方法按节读：`node <技能base>/../../scripts/section.mjs evidence-and-acceptance 2 3`（不要用读文件工具整份读，同一文件本会话不重复读）；证据要素见 `references/evidence-chain.md`，判据或白名单被动过时用同法读 `design-and-invariants` 的 §2–§3 做变异复核。
 2. 逐条判据确定可执行命令（{{command:verify}} / {{command:test}} / {{command:e2e}} / {{command:build}}）；未配置 → 记「未验证」，不编造命令。
 3. 在同一 {{commit:head}} 上跑；跨 commit 的证据必须标注差异，不得混用。
 4. 反证优先：先跑最可能红的用例；红了记录最小复现与失败细节，按 `references/red-item-triage.md` 处置。

@@ -1,6 +1,6 @@
 ---
 name: project-case-distill
-description: 复盘沉淀：把一段时间的事故或取舍写成七段案例，必含当时的错误判断与不可外推边界，脱敏后才可入包。
+description: 复盘与案例提炼：阶段结束、出过事故、或要把一次真实经历提炼成可复用方法时使用（仅 /project-case-distill 显式调用）。
 whenToUse: 阶段结束、出过事故、或需要把一次真实经历提炼成可复用方法时；仅用户显式调用。
 disable-model-invocation: true
 ---
@@ -22,7 +22,7 @@ disable-model-invocation: true
 
 ## 步骤
 
-1. 先加载 `../../methods/history-and-cases.md`；七段结构见 `references/case-structure.md`。
+1. 方法按节读：`node <技能base>/../../scripts/section.mjs history-and-cases 2 3`（不要用读文件工具整份读，同一文件本会话不重复读）；七段结构见 `references/case-structure.md`。
 2. 先写「当时的错误判断」。写不出这一段的，不写案例——只写最佳实践的案例价值为零。
 3. 列候选方案与实际取舍，说明约束是什么、为什么排除了其他方案。
 4. 证据只写类型与量级：命令类型、结果量级、时间；不写主机信息、账号、凭据、可识别业务数据。
