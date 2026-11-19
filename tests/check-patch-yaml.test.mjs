@@ -675,3 +675,126 @@ describe('CLI 契约', () => {
     }
   });
 });
+
+/* ------------------------------------------------------------------ */
+/* 负例：prompt 段不得含 {{（DSH 装配期当变量引用，实测会让模式装不上） */
+/* ------------------------------------------------------------------ */
+
+describe('负例：prompt 段含 {{', () => {
+  it('人格段 prefix 含 {{doc:index}} → PATCH-PROMPT-PLACEHOLDER', () => {
+    const patch = mutate((value) => {
+      pluginById(value, 'persona').config.prefix = '先读 {{doc:index}} 再动手。';
+    });
+    const result = validatePatchStructure(patch);
+    assert.ok(hasRule(result, 'PATCH-PROMPT-PLACEHOLDER'));
+    const error = result.errors.find((item) => item.rule === 'PATCH-PROMPT-PLACEHOLDER');
+    assert.match(error.message, /人格段 prefix/);
+    assert.match(error.message, /\{\{doc:index\}\}/);
+    assert.match(error.message, /malformed prompt variable reference/);
+    assert.ok(error.path.endsWith('config.prefix'), error.path);
+    assert.match(error.fix, /doc:index/);
+    assert.equal(error.line, null);
+    assert.equal(result.summary.promptPlaceholders, 1);
+  });
+
+  it('事故原样写法 {{doc:*}} → 同样拦截', () => {
+    const patch = mutate((value) => {
+      pluginById(value, 'persona').config.prefix = '{{doc:*}} 由项目 profile 解析。';
+    });
+    const result = validatePatchStructure(patch);
+    assert.ok(hasRule(result, 'PATCH-PROMPT-PLACEHOLDER'));
+    assert.match(
+      result.errors.find((item) => item.rule === 'PATCH-PROMPT-PLACEHOLDER').message,
+      /\{\{doc:\*\}\}/,
+    );
+  });
+
+  it('未配对的孤立 {{ 也拦', () => {
+    const patch = mutate((value) => {
+      pluginById(value, 'persona').config.prefix = '语气词 {{ 暂未闭合。';
+    });
+    const result = validatePatchStructure(patch);
+    assert.ok(hasRule(result, 'PATCH-PROMPT-PLACEHOLDER'));
+    assert.match(
+      result.errors.find((item) => item.rule === 'PATCH-PROMPT-PLACEHOLDER').message,
+      /未配对/,
+    );
+  });
+
+  it('人格段 suffix 同属一片风险面', () => {
+    const patch = mutate((value) => {
+      pluginById(value, 'persona').config.suffix = '（签认人：{{role:approver}}）';
+    });
+    const result = validatePatchStructure(patch);
+    const error = result.errors.find((item) => item.rule === 'PATCH-PROMPT-PLACEHOLDER');
+    assert.ok(error);
+    assert.match(error.message, /人格段 suffix/);
+  });
+
+  it('plan-mode.section 含 {{command:test}} → 同一规则', () => {
+    const patch = mutate((value) => {
+      pluginById(value, 'plan-mode').config.section = 'Plan first, then run {{command:test}}.';
+    });
+    const result = validatePatchStructure(patch);
+    const error = result.errors.find((item) => item.rule === 'PATCH-PROMPT-PLACEHOLDER');
+    assert.ok(error, JSON.stringify(result.errors));
+    assert.match(error.message, /计划模式 section/);
+    assert.match(error.message, /进入计划模式/);
+  });
+
+  it('多处命中 → 每字段各一条，不合并', () => {
+    const patch = mutate((value) => {
+      pluginById(value, 'persona').config.prefix = '{{doc:index}}';
+      pluginById(value, 'plan-mode').config.section = '{{command:verify}}';
+    });
+    const result = validatePatchStructure(patch);
+    assert.equal(
+      rulesOf(result).filter((rule) => rule === 'PATCH-PROMPT-PLACEHOLDER').length,
+      2,
+    );
+    assert.equal(result.summary.promptPlaceholders, 2);
+  });
+
+  it('给 rawText 时行号精确到 {{ 所在行', () => {
+    const patch = mutate((value) => {
+      pluginById(value, 'persona').config.prefix = '第一行\n第二行含 {{doc:index}}\n第三行';
+    });
+    const rawText = [
+      '# 注释',
+      '- insert:',
+      '    - id: preset-x',
+      '      config:',
+      '        prefix: |-',
+      '          第一行',
+      '          第二行含 {{doc:index}}',
+      '          第三行',
+    ].join('\n');
+    const result = validatePatchStructure(patch, { rawText, locate: () => 5 });
+    assert.equal(result.errors[0].line, 7);
+  });
+});
+
+describe('正例：prompt 段不带花括号', () => {
+  it('doc:index / command:test / role:approver 写法 → 0 错误', () => {
+    const patch = mutate((value) => {
+      pluginById(value, 'persona').config.prefix =
+        '阶段路由用 doc:index；验证跑 command:test；签认找 role:approver。';
+    });
+    const result = validatePatchStructure(patch);
+    assert.equal(result.errors.length, 0, JSON.stringify(result.errors, null, 2));
+    assert.equal(result.summary.promptPlaceholders, 0);
+  });
+
+  it('preset 不带 persona → 不报（缺项不是本规则的问题）', () => {
+    const patch = mutate((value) => {
+      const preset = value[0].insert[0];
+      preset.config.plugins = preset.config.plugins.filter((item) => item.id !== 'persona');
+    });
+    const result = validatePatchStructure(patch);
+    assert.equal(
+      result.errors.filter((item) => item.rule === 'PATCH-PROMPT-PLACEHOLDER').length,
+      0,
+    );
+    assert.equal(result.errors.length, 0);
+  });
+});

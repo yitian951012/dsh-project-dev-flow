@@ -12,6 +12,8 @@
  *   4) skill-filesystem 的 customSkillDirs 非空且指向 skills/
  *   5) plan-mode 的 config.section 非空
  *   6) tool-subagent-control 含 interrupt: false
+ *   7) prompt 段（persona prefix/suffix、plan-mode section）不含 {{——
+ *      宿主装配系统提示时把 {{name}} 当变量引用，写 {{ 会让装配那一步直接失败
  *
  * !!js 是 DSH patch 的运行时标签（如 `disabled: !!js process.platform === 'win32'`）。
  * 真实解析器不认识它，会把值降级为字符串并给出告警——这是预期行为，不是失败：
@@ -50,6 +52,7 @@ export const PATCH_RULES = Object.freeze({
   'PATCH-SKILL-DIRS': 'skill-filesystem 的 customSkillDirs 缺失或未指向 skills/',
   'PATCH-SECTION': 'plan-mode.section 为空',
   'PATCH-SUBAGENT': 'tool-subagent-control 缺少 interrupt: false',
+  'PATCH-PROMPT-PLACEHOLDER': 'prompt 段（persona prefix/suffix、plan-mode section）含 {{：装配期会被当系统提示变量引用',
 });
 
 /* ------------------------------------------------------------------ */
@@ -117,6 +120,56 @@ function sortDiagnostics(a, b) {
 }
 
 /* ------------------------------------------------------------------ */
+/* prompt 段：进系统提示的文本不许出现 {{                             */
+/* ------------------------------------------------------------------ */
+
+/**
+ * 为什么这是硬门禁（2026-11-19 在 DSH 0.2.2-rc.5 实测）：
+ * 宿主装配系统提示时对每个 section/context 调 interpolate()，把 `{{name}}` 当变量引用，
+ * 名字须匹配 /^[a-z][a-z0-9_]*$/ 且已注册，否则抛 malformed prompt variable reference。
+ * persona 在 preset 挂载时就失败（整个模式不可用）；plan-mode.section 只在进入计划模式时失败。
+ * 合法 YAML 与结构校验都拦不住它——这是「全绿 + 装不上」同时成立的原因。
+ *
+ * 边界：`{{doc:root}}` 这类占位符只对 methods/templates/skills 的正文有效（模型读到字面量）；
+ * patch 的 prompt 段由宿主求值，一律用不带花括号的 doc:index / command:test / role:approver。
+ */
+const PROMPT_TEXT_FIELDS = Object.freeze([
+  { id: 'persona', name: '@deepseek-ai/dsh-persona', key: 'prefix', label: '人格段 prefix', when: 'preset 挂载、装配系统提示时' },
+  { id: 'persona', name: '@deepseek-ai/dsh-persona', key: 'suffix', label: '人格段 suffix', when: 'preset 挂载、装配系统提示时' },
+  { id: 'plan-mode', name: '@deepseek-ai/dsh-plan-mode', key: 'section', label: '计划模式 section', when: '进入计划模式的那一步' },
+]);
+
+/** 抽出 {{ 片段（最多 limit 个）用于定位；未配对的 {{ 给可读标记。 */
+function promptFragments(text, limit = 3) {
+  const out = [];
+  let at = text.indexOf('{{');
+  while (at >= 0 && out.length < limit) {
+    const close = text.indexOf('}}', at + 2);
+    const paired = close >= 0 && close - at <= 40;
+    const end = paired ? close + 2 : Math.min(text.length, at + 16);
+    out.push(paired ? text.slice(at, end).replace(/\s*\n\s*/g, '\\n') : '{{（未配对的 }}）');
+    at = text.indexOf('{{', end);
+  }
+  return out;
+}
+
+/**
+ * 精确到 `{{` 所在行：locate 给的是标量自身起始行（块标量时是 `prefix: |-` 那行）；
+ * 用该值的行数作上界在原文里向后找第一个含 {{ 的行，找不到退回起始行——不编造行号。
+ */
+function promptVariableLine(locateLine, text, rawText) {
+  if (!Number.isInteger(locateLine)) return locateLine ?? null;
+  if (typeof rawText !== 'string') return locateLine;
+  const lines = rawText.split('\n');
+  const start = Math.max(0, locateLine - 1);
+  const end = Math.min(lines.length - 1, start + String(text).split('\n').length);
+  for (let index = start; index <= end; index += 1) {
+    if (lines[index].includes('{{')) return index + 1;
+  }
+  return locateLine;
+}
+
+/* ------------------------------------------------------------------ */
 /* 结构校验（纯函数：输入是已解析的对象，输出诊断）                   */
 /* ------------------------------------------------------------------ */
 
@@ -129,7 +182,7 @@ function sortDiagnostics(a, b) {
  * @returns {{ errors: Array, warnings: Array, notes: Array, summary: object }}
  *   locate 用于把语义路径映射回 YAML 行号；测试里可不传（line 为 null）。
  */
-export function validatePatchStructure(value, { file = 'cordis.patch.yml', locate = null, degradedTags = [] } = {}) {
+export function validatePatchStructure(value, { file = 'cordis.patch.yml', locate = null, degradedTags = [], rawText = null } = {}) {
   const errors = [];
   const warnings = [];
   const notes = [];
@@ -144,6 +197,7 @@ export function validatePatchStructure(value, { file = 'cordis.patch.yml', locat
     sectionChars: null,
     interrupt: undefined,
     degradedTags: 0,
+    promptPlaceholders: 0,
   };
 
   const lineFor = (segments) => {
@@ -155,12 +209,12 @@ export function validatePatchStructure(value, { file = 'cordis.patch.yml', locat
       return null;
     }
   };
-  const fail = (rule, segments, message, fix) => {
+  const fail = (rule, segments, message, fix, line = null) => {
     errors.push({
       severity: 'error',
       rule,
       file,
-      line: lineFor(segments),
+      line: Number.isInteger(line) ? line : lineFor(segments),
       path: pathLabel(segments),
       message,
       fix,
@@ -316,6 +370,29 @@ export function validatePatchStructure(value, { file = 'cordis.patch.yml', locat
   }
   summary.uniqueIdCount = seenIds.size;
   summary.pluginCount = items.filter((entry) => !entry.isPreset).length;
+
+  /* ---- 3.5) prompt 段：不得含 {{ ------------------------------------------ */
+
+  for (const field of PROMPT_TEXT_FIELDS) {
+    const owner = findItem(field.id, field.name);
+    if (owner == null) continue; // 该插件不随本 preset 安装：不是本规则的问题
+    const config = isPlainObject(owner.item.config) ? owner.item.config : null;
+    const text = config?.[field.key];
+    if (typeof text !== 'string' || !text.includes('{{')) continue;
+
+    const fieldPath = [...owner.path, 'config', field.key];
+    const count = text.split('{{').length - 1;
+    const examples = promptFragments(text);
+    const locateLine = lineFor(fieldPath);
+    summary.promptPlaceholders += count;
+    fail(
+      'PATCH-PROMPT-PLACEHOLDER',
+      fieldPath,
+      `${field.label} 含 ${count} 处 {{（例：${examples.join('、')}）：DSH 把 {{name}} 当系统提示变量引用，名字须匹配 /^[a-z][a-z0-9_]*$/ 且已注册，${field.when}会抛 malformed prompt variable reference，整个模式不可用`,
+      `把 {{…}} 改成不带花括号的写法（doc:index / command:test / role:approver），或把这段移进 methods/skills 让模型按需读；{{doc:root}} 这类占位符只在 templates/skills/methods 里合法（AUTHORING §5），patch 的 prompt 段一律不许出现 {{`,
+      promptVariableLine(locateLine, text, rawText),
+    );
+  }
 
   /* ---- 4) skill-filesystem：customSkillDirs 指向 skills -------------------- */
 
@@ -972,7 +1049,7 @@ export async function checkPatch({ root, patch = null, env = process.env, requir
       rule,
       file: rel,
       line: null,
-      message: '已降级为行级结构检查：未验证 YAML 语义（顶层单条 insert / preset id / interrupt:false 等结构项）',
+      message: '已降级为行级结构检查：未验证 YAML 语义（顶层单条 insert / preset id / interrupt:false / prompt 段不含 {{ 等结构项）',
       fix: '安装 yaml 或设置 DSH_FLOW_YAML_PARSER 后复跑；需要强保证时用 --require-yaml',
     });
     return finish(base);
@@ -991,6 +1068,7 @@ export async function checkPatch({ root, patch = null, env = process.env, requir
     file: rel,
     locate: parsed.locate,
     degradedTags: parsed.degradedTags,
+    rawText: text,
   });
   base.errors.push(...structure.errors);
   base.warnings.push(...parsed.otherWarnings, ...structure.warnings);
@@ -1053,6 +1131,7 @@ export function formatReport(result, { color = false, verbose = false, quiet = f
       if (Number.isInteger(summary.sectionChars)) parts.push(`section ${summary.sectionChars} 字符`);
       if (summary.interrupt === false) parts.push('interrupt=false');
       if (summary.degradedTags > 0) parts.push(`!!js 降级 ${summary.degradedTags} 处（预期）`);
+      if (summary.promptPlaceholders > 0) parts.push(`prompt 段 {{ ${summary.promptPlaceholders} 处`);
     }
     out.push('');
     out.push(`结构: ${parts.join(' / ')}`);
@@ -1118,6 +1197,7 @@ const HELP = `校验 cordis.patch.yml 的 YAML 语义与 bundle patch 结构契�
   4) skill-filesystem 的 customSkillDirs 非空且指向 skills/
   5) plan-mode 的 config.section 非空
   6) tool-subagent-control 含 interrupt: false
+  7) prompt 段（persona prefix/suffix、plan-mode section）不含 {{——宿主装配系统提示时把它当变量引用
 
 环境变量:
   DSH_FLOW_YAML_PARSER       指定 YAML 解析器位置（优先级最高）

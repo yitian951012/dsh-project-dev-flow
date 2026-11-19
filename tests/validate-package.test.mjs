@@ -689,6 +689,28 @@ describe('patch 契约', () => {
     assert.ok(hasRule(result.errors, 'PATCH-REQUIRED'));
   });
 
+  it('人格段 prefix 含 {{doc:index}} → PATCH-PROMPT-PLACEHOLDER', async () => {
+    const files = baseFiles();
+    files['cordis.patch.yml'] = BASE_PATCH.replace(
+      '          - id: skill-filesystem',
+      "          - id: persona\n            name: '@deepseek-ai/dsh-persona'\n            config:\n              prefix: 先读 {{doc:index}} 再动手。\n          - id: skill-filesystem",
+    );
+    const result = await validateFixture(files);
+    assert.ok(hasRule(result.errors, 'PATCH-PROMPT-PLACEHOLDER'));
+    assert.match(result.errors.find((e) => e.rule === 'PATCH-PROMPT-PLACEHOLDER').message, /人格段/);
+  });
+
+  it('计划模式 section 含 {{command:test}} → PATCH-PROMPT-PLACEHOLDER', async () => {
+    const files = baseFiles();
+    files['cordis.patch.yml'] = BASE_PATCH.replace(
+      'You are in plan mode until the user approves the plan; do not edit tracked files.',
+      'Run {{command:test}} before planning.',
+    );
+    const result = await validateFixture(files);
+    assert.ok(hasRule(result.errors, 'PATCH-PROMPT-PLACEHOLDER'));
+    assert.match(result.errors.find((e) => e.rule === 'PATCH-PROMPT-PLACEHOLDER').message, /计划模式/);
+  });
+
   it('缺 customSkillDirs → PATCH-REQUIRED', async () => {
     const files = mutate('cordis.patch.yml', "              customSkillDirs:\n                - !!js path.join(pkgRoot, 'skills')\n", '');
     const result = await validateFixture(files);

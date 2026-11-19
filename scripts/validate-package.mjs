@@ -76,6 +76,7 @@ export const RULES = Object.freeze({
   'PATCH-FORBIDDEN': 'patch 出现禁用项（list-agents 子路径 / modelSelectionSettings）',
   'PATCH-REQUIRED': 'patch 缺少必需项（plan-mode section / customSkillDirs）',
   'PATCH-STRUCTURE': 'patch 结构问题（重复 id / 插件项缺 name）',
+  'PATCH-PROMPT-PLACEHOLDER': 'prompt 段（persona prefix/suffix、plan-mode section）含 {{：装配期会被当系统变量引用',
   'DOCS-DIR': 'docs/ 目录无法解析',
 });
 
@@ -698,6 +699,30 @@ export function validatePatchText(ctx, text) {
     }
     if (!/['"]skills['"]|\/skills\b/.test(text)) {
       error(ctx, 'PATCH-REQUIRED', rel, null, 'customSkillDirs 没有指向 skills 目录', 'customSkillDirs 的值必须解析到包内 skills/，如 ...join(pkgRoot, \'skills\')');
+    }
+  }
+
+  // prompt 段：宿主装配系统提示时把 {{name}} 当变量引用，写 {{ 会让模式装不上。
+  // 行级镜像看不到 YAML 转义（"\u007b\u007b"）与 !!js 求值结果，那两类由
+  // check-patch-yaml.mjs 的解析后校验兜底（CI 需 --require-yaml）。
+  const PROMPT_TEXT_ITEMS = [
+    { id: 'persona', label: '人格段（prefix/suffix）', when: 'preset 挂载、装配系统提示时' },
+    { id: 'plan-mode', label: '计划模式 section', when: '进入计划模式的那一步' },
+  ];
+  for (const target of PROMPT_TEXT_ITEMS) {
+    const item = items.find((entry) => entry.id === target.id);
+    if (!item) continue;
+    for (let offset = 0; offset < item.block.length; offset += 1) {
+      if (!item.block[offset].includes('{{')) continue;
+      const at = item.line + offset;
+      error(
+        ctx,
+        'PATCH-PROMPT-PLACEHOLDER',
+        rel,
+        at,
+        `${target.label} 含 {{（第 ${at} 行）：DSH 把 {{name}} 当系统提示变量引用，${target.when}会抛 malformed prompt variable reference，模式不可用`,
+        '把 {{…}} 改成不带花括号的写法（doc:index / command:test / role:approver）；该写法只对 methods/templates/skills 正文有效（AUTHORING §5），patch 的 prompt 段没有花括号',
+      );
     }
   }
 
