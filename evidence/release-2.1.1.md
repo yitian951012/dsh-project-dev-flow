@@ -1,6 +1,6 @@
 # 发布证据：@yitian951012/dsh-project-dev-flow@2.1.1
 
-> 生成时间：2026-11-20T09:03:31.502Z · 结论：**包内验证全部通过**
+> 生成时间：2026-11-20T09:51:07.910Z · 结论：**包内验证全部通过**
 
 ## 基线与制品
 
@@ -9,8 +9,8 @@
 | 包名 | `@yitian951012/dsh-project-dev-flow` |
 | 版本 | `2.1.1` |
 | engines.dsh | `>=0.2.2-rc.1 <0.3.0` |
-| commit | `3f32e9df6dc1a5b9273a4676367a74fe12d46aa1` |
-| 工作区干净 | 否 |
+| commit | `36640ae82bf6e6ce83a1691a163a81d403ba4240` |
+| 工作区干净 | 是 |
 | Node | `v22.23.0` |
 | npm | `10.9.8` |
 | 包内 YAML 解析器 | 未验证 |
@@ -19,13 +19,13 @@
 
 | 步骤 | 退出码 | 耗时 | 关键指标 |
 | :--- | :---: | :---: | :--- |
-| `validate` | 0 | 155ms | — |
-| `sources` | 0 | 105ms | docs=39 / entries=39 |
-| `lock` | 0 | 99ms | — |
-| `patch` | 0 | 149ms | — |
-| `test` | 0 | 3018ms | tests=165 / pass=165 |
-| `test:source` | 0 | 275ms | tests=2 / pass=2 |
-| `pack` | 0 | 847ms | files=68 |
+| `validate` | 0 | 98ms | — |
+| `sources` | 0 | 66ms | docs=39 / entries=39 |
+| `lock` | 0 | 65ms | — |
+| `patch` | 0 | 98ms | — |
+| `test` | 0 | 1762ms | tests=165 / pass=165 |
+| `test:source` | 0 | 177ms | tests=2 / pass=2 |
+| `pack` | 0 | 509ms | files=68 |
 
 ## 关键文件哈希
 

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-20T09:03:31.502Z",
+  "generatedAt": "2026-11-20T09:51:07.910Z",
   "package": "@yitian951012/dsh-project-dev-flow",
   "version": "2.1.1",
   "engines": {
@@ -11,8 +11,8 @@
     "yaml": null
   },
   "git": {
-    "commit": "3f32e9df6dc1a5b9273a4676367a74fe12d46aa1",
-    "clean": false,
+    "commit": "36640ae82bf6e6ce83a1691a163a81d403ba4240",
+    "clean": true,
     "note": null
   },
   "hashes": {
@@ -31,7 +31,7 @@
         "command": "node.exe scripts/validate-package.mjs",
         "exitCode": 0,
         "ok": true,
-        "durationMs": 155,
+        "durationMs": 98,
         "metrics": {},
         "stdoutTail": [
           "",
@@ -47,7 +47,7 @@
         "command": "node.exe scripts/check-sources.mjs --require-docs",
         "exitCode": 0,
         "ok": true,
-        "durationMs": 105,
+        "durationMs": 66,
         "metrics": {
           "docs": {
             "docs": 39,
@@ -65,7 +65,7 @@
         "command": "node.exe scripts/gen-sources-lock.mjs --check",
         "exitCode": 0,
         "ok": true,
-        "durationMs": 99,
+        "durationMs": 65,
         "metrics": {},
         "stdoutTail": [
           "✔ sources.lock.json 已一致：39 份文档（active 25 / historical 13 / archive 1）"
@@ -78,7 +78,7 @@
         "command": "node.exe scripts/check-patch-yaml.mjs --require-yaml",
         "exitCode": 0,
         "ok": true,
-        "durationMs": 149,
+        "durationMs": 98,
         "metrics": {},
         "stdoutTail": [
           "   建议: 预期行为：无需改；本工具按字符串处理该值。若要精确类型校验，把它换成静态值（编译期可判定的写法）",
@@ -94,7 +94,7 @@
         "command": "node.exe --test tests/validate-package.test.mjs tests/check-patch-yaml.test.mjs tests/section.test.mjs tests/contract-consistency.test.mjs",
         "exitCode": 0,
         "ok": true,
-        "durationMs": 3018,
+        "durationMs": 1762,
         "metrics": {
           "tests": {
             "tests": 165,
@@ -110,7 +110,7 @@
           "# cancelled 0",
           "# skipped 0",
           "# todo 0",
-          "# duration_ms 2936.2817"
+          "# duration_ms 1710.2583"
         ],
         "stderrTail": []
       },
@@ -120,7 +120,7 @@
         "command": "node.exe --test tests/source-integration.test.mjs",
         "exitCode": 0,
         "ok": true,
-        "durationMs": 275,
+        "durationMs": 177,
         "metrics": {
           "tests": {
             "tests": 2,
@@ -136,7 +136,7 @@
           "# cancelled 0",
           "# skipped 0",
           "# todo 0",
-          "# duration_ms 191.978"
+          "# duration_ms 122.594"
         ],
         "stderrTail": []
       },
@@ -146,11 +146,11 @@
         "command": "npm pack --dry-run --json --ignore-scripts",
         "exitCode": 0,
         "ok": true,
-        "durationMs": 847,
+        "durationMs": 509,
         "metrics": {
           "pack": {
             "files": 68,
-            "size": 177092,
+            "size": 177519,
             "filename": "yitian951012-dsh-project-dev-flow-2.1.1.tgz"
           }
         },
