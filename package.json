@@ -1,6 +1,6 @@
 {
   "name": "@yitian951012/dsh-project-dev-flow",
-  "version": "2.1.0",
+  "version": "2.1.1",
   "private": false,
   "license": "Apache-2.0",
   "type": "module",
@@ -59,10 +59,21 @@
   },
   "scripts": {
     "validate": "node scripts/validate-package.mjs",
-    "check:sources": "node scripts/check-sources.mjs",
+    "check:sources": "node scripts/check-sources.mjs --require-docs",
+    "check:sources:portable": "node scripts/check-sources.mjs",
     "check:patch": "node scripts/check-patch-yaml.mjs",
+    "check:patch:ci": "node scripts/check-patch-yaml.mjs --require-yaml",
     "gen:sources": "node scripts/gen-sources-lock.mjs",
-    "test": "node --test tests/validate-package.test.mjs tests/check-patch-yaml.test.mjs",
-    "test:source": "node --test tests/source-integration.test.mjs"
+    "test": "node --test tests/validate-package.test.mjs tests/check-patch-yaml.test.mjs tests/section.test.mjs tests/contract-consistency.test.mjs",
+    "test:source": "node --test tests/source-integration.test.mjs",
+    "pack:dry": "npm pack --dry-run --json --ignore-scripts",
+    "verify": "node scripts/verify.mjs",
+    "smoke:profile": "node scripts/smoke-profile.mjs",
+    "acceptance": "node scripts/acceptance-session.mjs",
+    "evidence": "node scripts/release-evidence.mjs",
+    "metrics": "node scripts/metrics.mjs"
+  },
+  "devDependencies": {
+    "yaml": "2.9.1"
   }
 }

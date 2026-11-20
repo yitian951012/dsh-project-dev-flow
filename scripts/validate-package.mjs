@@ -98,10 +98,12 @@ const KNOWN_PLACEHOLDERS = Object.freeze([
   'doc:index',
   'doc:decision-log',
   'doc:status',
+  'doc:acceptance-checklist',
   'command:verify',
   'command:test',
   'command:build',
   'command:e2e',
+  'command:gate',
   'role:approver',
   'role:owner',
   'date:today',
@@ -144,6 +146,10 @@ const REDLINE_CRED = [
   { re: /(?:api[_-]?key|access[_-]?token|secret[_-]?key|password|passwd)\s*[:=]\s*["'][^"']{8,}["']/i, label: '明文凭据赋值' },
   { re: /(?:API_KEY|SECRET|TOKEN|PASSWORD)\s*=\s*[A-Za-z0-9][A-Za-z0-9._+-]{7,}/, label: '.env 风格明文赋值' },
   { re: /(?:账号|账户)\s*(?:ID|id)\s*[:：]\s*\S{4,}/, label: '账号 ID' },
+  { re: /\bAWS_SECRET_ACCESS_KEY\s*[=:]\s*[A-Za-z0-9/+._-]{16,}/, label: 'AWS Secret Access Key 明文赋值' },
+  { re: /\bgithub_pat_[A-Za-z0-9_]{20,}\b/, label: 'GitHub fine-grained token' },
+  { re: /\bglpat-[A-Za-z0-9_-]{20,}\b/, label: 'GitLab Personal Access Token' },
+  { re: /\bxox[baprs]-[A-Za-z0-9-]{10,}\b/, label: 'Slack Token' },
 ];
 
 const REDLINE_WORK = [
@@ -436,7 +442,15 @@ function insideQuotes(line, index) {
   return false;
 }
 
-function scanLines(ctx, { rel, text, patterns, severity, rule, fix, noun }) {
+/**
+ * @param {{ rel:string, text:string, patterns:Array, severity:'error'|'warning', rule:string,
+ *           fix:(p:any)=>string, noun:string, allowNegation?:boolean, allowQuotes?:boolean }} options
+ *
+ * allowNegation / allowQuotes 默认为 true（用于「100% 完成」这类"谈论而非断言"的写法）。
+ * 凭据规则必须传 false：秘密不会因为前面写了「禁止提交」就变得安全，
+ * 反而是最常见的绕过形状。
+ */
+function scanLines(ctx, { rel, text, patterns, severity, rule, fix, noun, allowNegation = true, allowQuotes = true }) {
   const lines = splitLines(text);
   for (let i = 0; i < lines.length; i += 1) {
     const line = lines[i];
@@ -444,9 +458,9 @@ function scanLines(ctx, { rel, text, patterns, severity, rule, fix, noun }) {
       const match = pattern.re.exec(line);
       if (!match) continue;
       const index = match.index ?? 0;
-      if (isNegated(line, index)) continue;
+      if (allowNegation && isNegated(line, index)) continue;
       // 引号内的写法是「在谈论这个说法」，不是断言；否则「常见错误：写「100% 完成」」会被误报。
-      if (insideQuotes(line, index)) continue;
+      if (allowQuotes && insideQuotes(line, index)) continue;
       if (severity === 'error') {
         error(ctx, rule, rel, i + 1, `${noun}：${pattern.label}`, fix(pattern));
       } else {
@@ -1104,6 +1118,9 @@ async function inspectAsset(ctx, { rootAbs, rel, text, docsRoot, knownDocs, now 
     rule: 'REDLINE-CRED',
     noun: '命中疑似凭据',
     fix: () => '删除密钥/账号 ID；用 {{env:...}} 或「见项目 profile」代替，凭据不得进包（§6.3）',
+    // 凭据不享受「否定语 / 引号」豁免：秘密写在「禁止提交 …」或引号里依然是秘密。
+    allowNegation: false,
+    allowQuotes: false,
   });
   scanLines(ctx, {
     rel,
@@ -1167,6 +1184,39 @@ function largestQuoteRun(lines) {
 /* ------------------------------------------------------------------ */
 
 const CONTENT_DIRS = ['methods', 'templates', 'cases', 'skills', 'references'];
+
+/** 内容资产之外、但同样会被 npm pack 带走的文本面。凭据扫描必须覆盖它们。 */
+const PUBLISHED_ROOT_FILES = ['README.md', 'AUTHORING.md', 'MIGRATION.md', 'CHANGELOG.md'];
+const PUBLISHED_DIRS = ['detail', 'locale', 'config', 'evidence'];
+const PUBLISHED_EXTENSIONS = ['.md', '.json', '.yml', '.yaml', '.txt'];
+
+async function listPublishedSurfaceFiles(rootAbs) {
+  const out = [];
+  for (const rel of PUBLISHED_ROOT_FILES) {
+    if (existsSync(path.join(rootAbs, rel))) out.push(rel);
+  }
+  for (const dirName of PUBLISHED_DIRS) {
+    const dirAbs = path.join(rootAbs, dirName);
+    if (!existsSync(dirAbs)) continue;
+    await walkAnyText(dirAbs, dirName, out);
+  }
+  out.sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+  return out;
+}
+
+async function walkAnyText(dirAbs, prefix, out) {
+  const entries = await readdir(dirAbs, { withFileTypes: true });
+  entries.sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
+  for (const entry of entries) {
+    if (entry.name.startsWith('.')) continue;
+    const rel = `${prefix}/${entry.name}`;
+    if (entry.isDirectory()) {
+      await walkAnyText(path.join(dirAbs, entry.name), rel, out);
+    } else if (entry.isFile() && PUBLISHED_EXTENSIONS.some((ext) => entry.name.toLowerCase().endsWith(ext))) {
+      out.push(rel);
+    }
+  }
+}
 
 async function listContentFiles(rootAbs) {
   const out = [];
@@ -1266,6 +1316,22 @@ export async function validatePackage(options = {}) {
 
   if (files.length === 0) {
     note(ctx, 'ASSET-NONE', '未发现任何内容资产（methods/templates/cases/skills 均为空）', '按 AUTHORING §1 落地资产；校验器只校验存在的东西，不会替你补内容');
+  }
+
+  // 3.5) 发布文件面的凭据扫描：README / DETAIL / locale / config / evidence 也会进包。
+  for (const rel of await listPublishedSurfaceFiles(rootAbs)) {
+    const text = await readFile(path.join(rootAbs, rel), 'utf8');
+    scanLines(ctx, {
+      rel,
+      text,
+      patterns: REDLINE_CRED,
+      severity: 'error',
+      rule: 'REDLINE-CRED',
+      noun: '命中疑似凭据（发布文件面）',
+      fix: () => '删除密钥/账号 ID；发布文件（README/DETAIL/locale/config/evidence）与内容资产同样受 §6.3 约束',
+      allowNegation: false,
+      allowQuotes: false,
+    });
   }
 
   // 4) id 唯一

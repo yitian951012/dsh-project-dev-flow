@@ -1,0 +1,73 @@
+{
+  "generatedAt": "2026-11-20T07:50:54.208Z",
+  "baselineLabel": "v2.0.1",
+  "baselineCommit": "465f094",
+  "currentLabel": "@yitian951012/dsh-project-dev-flow@2.1.1",
+  "baseline": {
+    "patch": {
+      "personaChars": 1184,
+      "planSectionChars": 847,
+      "pluginItems": 32,
+      "declaredDisabled": 2
+    },
+    "skills": {
+      "files": 15,
+      "bytes": 35930
+    },
+    "methods": {
+      "files": 5,
+      "fullBytes": 38334,
+      "sectionBytes": 10386
+    }
+  },
+  "current": {
+    "patch": {
+      "personaChars": 922,
+      "planSectionChars": 847,
+      "pluginItems": 29,
+      "declaredDisabled": 3
+    },
+    "skills": {
+      "files": 15,
+      "bytes": 37210
+    },
+    "methods": {
+      "files": 5,
+      "fullBytes": 38334,
+      "sectionBytes": 10386,
+      "perFile": [
+        {
+          "name": "design-and-invariants.md",
+          "fullBytes": 7650,
+          "sectionBytes": 2135
+        },
+        {
+          "name": "evidence-and-acceptance.md",
+          "fullBytes": 7861,
+          "sectionBytes": 2117
+        },
+        {
+          "name": "history-and-cases.md",
+          "fullBytes": 7241,
+          "sectionBytes": 1894
+        },
+        {
+          "name": "intake-and-decision.md",
+          "fullBytes": 7843,
+          "sectionBytes": 2149
+        },
+        {
+          "name": "truth-and-lifecycle.md",
+          "fullBytes": 7739,
+          "sectionBytes": 2091
+        }
+      ]
+    }
+  },
+  "notMeasured": [
+    "真实 token 数（需对系统提示与工具 schema 做宿主侧采样）",
+    "工具 schema 字节数（dump 到实际注册的 JSON Schema）",
+    "模型实际读取的文件与次数（需会话轨迹）",
+    "任务成功率与人工接管次数（需真实任务统计）"
+  ]
+}

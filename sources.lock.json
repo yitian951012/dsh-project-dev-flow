@@ -244,7 +244,7 @@
     },
     {
       "path": "docs/34_验收_开发模式手册.md",
-      "sha256": "35d185000492149ed651a7fa86a56573976ad81a33b7a0b3905227feb2baf9c8",
+      "sha256": "1e3cfed7e0db153c0bbfef4446dded01d4a942cb088396b5efa46aafc1c9d770",
       "lifecycle": "active",
       "disposition": "method",
       "targets": [

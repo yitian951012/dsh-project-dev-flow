@@ -1,0 +1,79 @@
+{
+  "generatedAt": "2026-11-20T09:00:15.039Z",
+  "package": "@yitian951012/dsh-project-dev-flow",
+  "version": "2.1.1",
+  "profile": "headless",
+  "skillDir": "E:\\dsh-workspace\\项目管理\\dsh-project-dev-flow\\skills",
+  "prerequisites": [
+    "目标 profile 必须有一条可用的模型路由（桌面端凭据不会自动注入 CLI）",
+    "DSH 需提供 skill / skill-filesystem / tool-skill / commands 插件（base 自带）"
+  ],
+  "mount": {
+    "ok": true,
+    "exitCode": 0,
+    "customSkillDirsVisible": true,
+    "skillsDir": "E:/dsh-workspace/项目管理/dsh-project-dev-flow/skills"
+  },
+  "tasks": [
+    {
+      "id": "route-docs",
+      "kind": "route",
+      "expect": "project-docs",
+      "prompt": "这个仓库的文档有点乱，同一件事写在好几处，文档和代码也开始对不上了。帮我梳理一下该怎么治理。",
+      "note": "不点名技能，观察是否自动路由到文档治理技能",
+      "exitCode": 1,
+      "eventCount": 6,
+      "matched": false,
+      "error": {
+        "code": "MISSING_CREDENTIAL",
+        "message": "llm-deepseek: no API key for provider route \"deepseek-official\"; store DEEPSEEK_API_KEY through the credentials service (the web Models page writes it), or export DEEPSEEK_API_KEY in the launching environment"
+      },
+      "excerpt": [
+        "{\"type\":\"session\",\"sessionId\":\"session-7f98be45-ab04-46a6-a688-0b7416bd8d83\",\"cwd\":\"E:\\\\dsh-workspace\\\\项目管理\\\\dsh-project-dev-flow\"}",
+        "{\"type\":\"status\",\"phase\":\"turn_start\",\"turn\":1}",
+        "{\"type\":\"status\",\"phase\":\"step_start\",\"turn\":1,\"step\":1}"
+      ]
+    },
+    {
+      "id": "route-intake",
+      "kind": "route",
+      "expect": "project-intake",
+      "prompt": "我们要给插件加一个导出功能，你先把需求接下来：判断类型、列出判据和需要谁拍板。",
+      "note": "不点名技能，观察是否自动路由到需求受理技能",
+      "exitCode": 1,
+      "eventCount": 6,
+      "matched": false,
+      "error": {
+        "code": "MISSING_CREDENTIAL",
+        "message": "llm-deepseek: no API key for provider route \"deepseek-official\"; store DEEPSEEK_API_KEY through the credentials service (the web Models page writes it), or export DEEPSEEK_API_KEY in the launching environment"
+      },
+      "excerpt": [
+        "{\"type\":\"session\",\"sessionId\":\"session-66be8436-522e-4480-a3be-eb4c9741103e\",\"cwd\":\"E:\\\\dsh-workspace\\\\项目管理\\\\dsh-project-dev-flow\"}",
+        "{\"type\":\"status\",\"phase\":\"turn_start\",\"turn\":1}",
+        "{\"type\":\"status\",\"phase\":\"step_start\",\"turn\":1,\"step\":1}"
+      ]
+    },
+    {
+      "id": "slash-acceptance",
+      "kind": "slash",
+      "expect": "project-acceptance",
+      "prompt": "/project-acceptance 给出三条交付判定要点，并说明需要哪些证据。",
+      "note": "斜杠手势：验证显式调用能注入技能",
+      "exitCode": 1,
+      "eventCount": 6,
+      "matched": false,
+      "error": {
+        "code": "MISSING_CREDENTIAL",
+        "message": "llm-deepseek: no API key for provider route \"deepseek-official\"; store DEEPSEEK_API_KEY through the credentials service (the web Models page writes it), or export DEEPSEEK_API_KEY in the launching environment"
+      },
+      "excerpt": [
+        "{\"type\":\"session\",\"sessionId\":\"session-ea9a298f-2a52-4b78-bd7c-1f7121f926b5\",\"cwd\":\"E:\\\\dsh-workspace\\\\项目管理\\\\dsh-project-dev-flow\"}",
+        "{\"type\":\"status\",\"phase\":\"turn_start\",\"turn\":1}",
+        "{\"type\":\"status\",\"phase\":\"step_start\",\"turn\":1,\"step\":1}"
+      ]
+    }
+  ],
+  "status": "blocked",
+  "summary": "模型凭据未注入 CLI：任务未真正执行，不能记为通过",
+  "blockedReason": "llm-deepseek: no API key for provider route \"deepseek-official\"; store DEEPSEEK_API_KEY through the credentials service (the web Models page writes it), or export DEEPSEEK_API_KEY in the launching environment"
+}

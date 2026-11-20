@@ -21,14 +21,14 @@ disable-model-invocation: false
 
 ## 步骤
 
-1. 方法按节读：`node <技能base>/../../scripts/section.mjs truth-and-lifecycle 2 3` 与 `section.mjs intake-and-decision 2 3`（不要用读文件工具整份读；§1/§4/§5 只在对应场景读，同一文件本会话不重复读）；本技能不复述其判据，profile 字段见 `references/project-profile.md`。目标项目为本地优先应用（单机运行、数据落本地、无多租户）时，另读 `../../references/adapters/local-first-app.md`。
+1. 方法按节读：`node <技能base>/../../scripts/section.mjs truth-and-lifecycle 2 3` 与 `node <技能base>/../../scripts/section.mjs intake-and-decision 2 3`（不要用读文件工具整份读；§1/§4/§5 只在对应场景读，同一文件本会话不重复读）；本技能不复述其判据，profile 字段见 `references/project-profile.md`。目标项目为本地优先应用（单机运行、数据落本地、无多租户）时，另读 `../../references/adapters/local-first-app.md`。
 2. 只读检查，按 `../../templates/project-profile.md` 的字段表逐项填值（字段语义见 `references/project-profile.md`），每项记出处（文件+行位或命令输出）。
 3. 找不到出处的字段写「未验证」；禁止沿用其他项目或其他仓库的命令与门禁。
 4. 经用户确认后才写回项目文档；未确认时只作会话内「临时 profile」使用并显式标注。
 5. 按 `references/stage-routing.md` 判定当前阶段，并说出「现在在哪一段 / 下一动作 / 谁确认」。
 6. 阶段 2 设计定型：范围、契约、数据、判据变化先登记 {{doc:decision-log}} 再动代码；按节读 `node <技能base>/../../scripts/section.mjs design-and-invariants 2 3`。
-7. 阶段 3 实现：先写会失败的用例，再实现；跑 {{command:test}} 与 {{command:verify}}，记录 exit code 与 {{commit:head}}；按节读 `design-and-invariants 2 3`（契约→可失败断言）与 `evidence-and-acceptance 2 3`（证据与判级）。
-8. 阶段 4/5 与阶段 6 对应技能默认不可自动加载：提示用户单独一行发送 `/project-acceptance` 或 `/project-case-distill`（前后留空格或换行，否则不会注入）；用户未调用时，按节读 `evidence-and-acceptance 2 3`、`history-and-cases 2 3` 的判据自行执行，并标注「技能未加载」。文档治理类转 `project-docs`；阶段切换时只更新 {{doc:status}} 投影，不重写看板结论。
+7. 阶段 3 实现：先写会失败的用例，再实现；跑 {{command:test}} 与 {{command:verify}}，记录 exit code 与 {{commit:head}}；按节读 `node <技能base>/../../scripts/section.mjs design-and-invariants 2 3`（契约→可失败断言）与 `node <技能base>/../../scripts/section.mjs evidence-and-acceptance 2 3`（证据与判级）。
+8. 阶段 4/5 与阶段 6 对应技能默认不可自动加载：提示用户单独一行发送 `/project-acceptance` 或 `/project-case-distill`（前后留空格或换行，否则不会注入）；用户未调用时，按节读 `node <技能base>/../../scripts/section.mjs evidence-and-acceptance 2 3`、`node <技能base>/../../scripts/section.mjs history-and-cases 2 3` 的判据自行执行，并标注「技能未加载」。文档治理类转 `project-docs`；阶段切换时只更新 {{doc:status}} 投影，不重写看板结论。
 9. 每次阶段切换输出证据块：命令原文 + exit code + commit；未执行的写「计划，未跑」。
 
 ## 输出

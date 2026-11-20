@@ -1,5 +1,45 @@
 # CHANGELOG
 
+## 2.1.1 — 2026-11-20
+
+**正确性与证据闭环修正：不新增内容能力，不改 preset id、5 个技能与六阶段判定口径。把上一轮「静态全绿但语义仍漂移」的缺口逐条钉死。**
+
+### 修正
+
+- **按节读取入口**：`scripts/section.mjs` 改为先校验原始字符串（`/^[1-9]\d*$/`）再转数字，并限制参数个数；`2junk` / `2.9` / `1e2` / 多余参数不再被静默宽化。新增 12 项专项测试（普通 / 边界 / 异常）。
+- **独立环境可复现**：把 `yaml@2.9.1` 固定为作者侧 `devDependency`，提交 `package-lock.json`；测试改用包内解析器。移除宿主 DSH 解析器环境变量后，此前 51 项中 1 项失败，现在全绿。新增 `check:patch:ci` 强制 `--require-yaml`。
+- **来源完整性三态**：`check:sources` 在找不到 docs/ 时不再输出「✔ sources 一致 0/0」，改为「⚠ 未验证」；新增 `--require-docs` 让作者 / CI 缺源文档即失败。默认 `check:sources` 使用强制模式，另设 `check:sources:portable` 供安装态使用。
+- **targets 路径穿越**：lock 结构校验拒绝绝对路径、盘符、反斜杠、空段、`.` 与 `..`；存在性检查再加 package 根 containment。`methods/../package.json` 不再能冒充方法落点。
+- **凭据扫描**：取消凭据规则的「否定语 / 引号」豁免（`禁止提交 …` 不再安全通行）；新增 AWS Secret Access Key、`github_pat_`、GitLab PAT、Slack Token 形态；扫描范围从内容资产扩展到 README / AUTHORING / MIGRATION / CHANGELOG / detail / locale / config / evidence 等实际发布文件面。
+- **主密钥忽略**：根与插件 `.gitignore`、`.npmignore` 补 `.secret-key` 与 `.secret-key.bak-*`（`*.key` 不匹配这类点开头的轮换文件）。
+- **profile 契约对齐**：模板、字段表与机读示例统一「一键门禁」（`command:gate`）与「验收清单」（`doc:acceptance-checklist`）字段；机读示例删除与模板互斥的 `proxySignoff`。
+- **受理双写**：`project-intake` 第 8 步改为「已明确不做 / 尚未决定」二选一归口，删除与 `不得双重记账` 自相矛盾的「一律写入」。
+- **按节读命令**：`project-dev-flow` 第 1/7/8 步的裸方法名改为完整可执行命令。
+- **验收路由**：`project-acceptance` 不再要求「必须走本技能」，改为「必须执行验收判据；未显式调用则按 methods 执行并标注技能未加载」。
+- **算力预算**：隔离 profile 的 `--dump-config` 实测发现，2.1.0 声称关闭的三簇（`tool-subagent-fork` / `workflow-ptc` / `tool-workflow`）即使写 `disabled: true` 也会被宿主预设合并逻辑丢弃（组内、列表顶层、带不带 `config` 都一样）——等于「看起来关了、实际没关」。本版把这三项从 preset 中移除（不安装即不占工具块），只保留实测生效的 `tool-schedule`；新增 `PATCH-TOOL-DISABLED`（该工具被重新启用即失败）与 `PATCH-TOOL-INEFFECTIVE-DISABLE`（把不生效的关闭声明加回来即失败）。
+- **表达式门禁**：新增 `PATCH-JS-EXPRESSION`，`!!js` 只允许平台判定与包内 skills 路径解析；child_process / exec / spawn / eval / Function / fetch / process.env / 文件读写一律拒绝。检查前移到结构早退之前，坏结构也会被查。
+- **写入口径**：DETAIL / MIGRATION 改为「安装与卸载本身不写目标项目；运行时 agent 经授权可写回，回滚不撤销已发生的项目修改」。
+- **AUTHORING 发布口径**：不再自称「不对外发布」，改为「面向内容维护者、随包发布、不进入默认会话上下文」。
+- **源文档母本**：`docs/34` 的安装 / 维护段增加现行口径并把三文件表述标为 2026-10 历史记录；来源锁按内容重评审后重算。
+
+### 新增
+
+- `tests/contract-consistency.test.mjs`：把上述语义矛盾转成回归测试（双写、裸命令、验收路由、profile 同构、AUTHORING 口径）。
+- `npm run verify`（统一管道）、`npm run evidence`（发布证据清单）、`npm run metrics`（声明面积对照）。
+- `npm run acceptance`（`scripts/acceptance-session.mjs`）：真实会话验收——用 `--patch` 临时挂载包内技能，跑两条自动路由任务 + 一条 slash 任务，断言命中 `project-docs` / `project-intake` / `project-acceptance`，结果写入 `evidence/acceptance-<版本>.json|md`。
+
+### 验收状态（如实披露）
+
+- 隔离 profile 的安装 / 装配转储 / 卸载回滚 / 2.1.0 → 2.1.1 → 2.1.0 升级回滚：**已实测通过**。
+- 技能目录进入运行时配置：**已由 `--patch` 覆盖后的 `--dump-config` 实测确认**。
+- 技能自动路由与 slash 调用：**未通过**。本环境 CLI profile 没有可用模型路由（`MISSING_CREDENTIAL: no API key for provider route "deepseek-official"`；关掉 api-key 路由后为 `NO_ADAPTER`），验收脚本 status=blocked，证据见 `evidence/acceptance-2.1.1.json`。该项不能用包内测试替代。
+
+### 兼容
+
+- preset id、5 个技能、3 自动 / 2 显式分工与六阶段判定口径不变；`engines.dsh` 不变。
+- 新增的是作者侧开发依赖（`yaml`），不会进入 bundle 运行时依赖。
+- 升级按 `MIGRATION.md` 重装并走验证清单；旧会话不热切换。
+
 ## 2.1.0 — 2026-11-19
 
 **算力预算发布：人格段二次压缩、技能改为按节读取方法、默认关闭与流程无关的三个工具簇。不改变 preset id、5 个技能与六阶段判定口径。**

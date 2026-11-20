@@ -522,6 +522,49 @@ describe('负例：篇幅与内部链接', () => {
 /* 负例：内容红线（§6）                                              */
 /* ------------------------------------------------------------------ */
 
+describe('负例：凭据扫描不得被否定语或引号绕过', () => {
+  it('写在「禁止提交 …」后面的密钥仍然报错', async () => {
+    const files = baseFiles();
+    files['methods/truth-and-lifecycle.md'] += '\n- 禁止提交 sk-ABCDEFGHIJKLMNOPQRSTUVWXYZ012345\n';
+    const result = await validateFixture(files);
+    assert.ok(hasRule(result.errors, 'REDLINE-CRED'), JSON.stringify(result.errors, null, 2));
+  });
+
+  it('引号包裹的密钥仍然报错', async () => {
+    const files = baseFiles();
+    files['templates/prd.md'] += '\n> 示例：「sk-ABCDEFGHIJKLMNOPQRSTUVWXYZ012345」\n';
+    const result = await validateFixture(files);
+    assert.ok(hasRule(result.errors, 'REDLINE-CRED'), JSON.stringify(result.errors, null, 2));
+  });
+
+  it('AWS_SECRET_ACCESS_KEY / github_pat_ 等常见形态被识别', async () => {
+    const files = baseFiles();
+    files['methods/truth-and-lifecycle.md'] += '\n- AWS_SECRET_ACCESS_KEY=abcdefghijklmnop1234\n';
+    const aws = await validateFixture(files);
+    assert.ok(hasRule(aws.errors, 'REDLINE-CRED'), JSON.stringify(aws.errors, null, 2));
+
+    const files2 = baseFiles();
+    files2['methods/truth-and-lifecycle.md'] += '\n- github_pat_11ABCDEFG0123456789_abcdefghijklmnop\n';
+    const gh = await validateFixture(files2);
+    assert.ok(hasRule(gh.errors, 'REDLINE-CRED'), JSON.stringify(gh.errors, null, 2));
+  });
+
+  it('发布文件面（README）同样被扫描，不能只在内容资产里干净', async () => {
+    const files = baseFiles();
+    files['README.md'] = '# 说明\n\n- 禁止提交 sk-ABCDEFGHIJKLMNOPQRSTUVWXYZ012345\n';
+    const result = await validateFixture(files);
+    assert.ok(hasRule(result.errors, 'REDLINE-CRED'), JSON.stringify(result.errors, null, 2));
+    assert.ok(result.errors.some((item) => item.file === 'README.md'));
+  });
+
+  it('正常文本与占位符不误报（控制组）', async () => {
+    const files = baseFiles();
+    files['README.md'] = '# 说明\n\n- 用 {{env:token}} 而不是明文；凭据见项目 profile。\n';
+    const result = await validateFixture(files);
+    assert.equal(hasRule(result.errors, 'REDLINE-CRED'), false, JSON.stringify(result.errors, null, 2));
+  });
+});
+
 describe('负例：内容红线 §6', () => {
   it('§6.1 当前项目数字（1952、1759 行）→ REDLINE-NUMBER', async () => {
     const files = appendTo('methods/truth-and-lifecycle.md', '本仓库有 1952 个用例，日志 1759 行。');
@@ -1015,6 +1058,104 @@ whenToUse: 用户要求判定能否交付、需要证据包时。
   });
 });
 
+
+/* ------------------------------------------------------------------ */
+/* 来源完整性三态与 targets 路径安全                                   */
+/* ------------------------------------------------------------------ */
+
+describe('来源完整性：三态与路径安全', () => {
+  it('缺 docs 且未要求验证 → status=skipped、verified=false，且不得说「一致」', async () => {
+    const root = await mkdtemp(path.join(tmpdir(), 'dpf-nodocs-'));
+    try {
+      const result = await verifySources({ root, docsRoot: null });
+      assert.equal(result.ok, true, '安装态无源文档不是错误');
+      assert.equal(result.verified, false);
+      assert.equal(result.status, 'skipped');
+      assert.ok(result.notes.some((n) => n.rule === 'SOURCE-DOCS-UNRESOLVED'));
+      assert.match(
+        result.notes.find((n) => n.rule === 'SOURCE-DOCS-UNRESOLVED').message,
+        /未验证|未执行哈希比对/,
+      );
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it('缺 docs 且 requireDocs → 必须失败（作者 / CI 不得假绿）', async () => {
+    const root = await mkdtemp(path.join(tmpdir(), 'dpf-nodocs-req-'));
+    try {
+      const result = await verifySources({ root, docsRoot: null, requireDocs: true });
+      assert.equal(result.ok, false);
+      assert.equal(result.verified, false);
+      assert.equal(result.status, 'failed');
+      assert.ok(hasRule(result.errors, 'SOURCE-DOCS-REQUIRED'), JSON.stringify(result.errors, null, 2));
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it('正常比对 → status=passed、verified=true', async () => {
+    const root = await mkdtemp(path.join(tmpdir(), 'dpf-passed-'));
+    const docsRoot = path.join(root, 'docs');
+    await mkdir(docsRoot, { recursive: true });
+    await writeFile(path.join(docsRoot, 'only.md'), '# only\n', 'utf8');
+    const built = await buildLock({ docsRoot });
+    await writeFile(path.join(root, 'sources.lock.json'), built.text, 'utf8');
+    try {
+      const result = await verifySources({ root, docsRoot });
+      assert.equal(result.ok, true, JSON.stringify(result.errors, null, 2));
+      assert.equal(result.verified, true);
+      assert.equal(result.status, 'passed');
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it('targets 含 .. → SOURCE-LOCK-SCHEMA，不得冒充 methods/ 落点', () => {
+    const lock = {
+      schemaVersion: 1,
+      files: [{
+        path: 'docs/a.md',
+        sha256: '0'.repeat(64),
+        lifecycle: 'active',
+        disposition: 'method',
+        targets: ['methods/../package.json'],
+        note: '试图用 .. 冒充方法落点',
+      }],
+    };
+    const shape = validateLockShape(lock);
+    assert.ok(hasRule(shape.errors, 'SOURCE-LOCK-SCHEMA'), JSON.stringify(shape.errors, null, 2));
+    assert.match(shape.errors.find((e) => e.rule === 'SOURCE-LOCK-SCHEMA').message, /不安全相对路径/);
+  });
+
+  it('targets 含反斜杠、绝对路径、盘符、空段 → 全部拒绝', () => {
+    for (const bad of ['methods\\..\\package.json', '/etc/passwd', 'C:/Windows/win.ini', 'methods//x.md', './methods/x.md']) {
+      const shape = validateLockShape({
+        schemaVersion: 1,
+        files: [{
+          path: 'docs/a.md',
+          sha256: '0'.repeat(64),
+          lifecycle: 'active',
+          disposition: 'method',
+          targets: [bad],
+          note: '测试不安全路径',
+        }],
+      });
+      assert.ok(hasRule(shape.errors, 'SOURCE-LOCK-SCHEMA'), `应拒绝 ${JSON.stringify(bad)}`);
+    }
+  });
+
+  it('normalizeRelTarget / isInsideRoot 的边界', async () => {
+    const { normalizeRelTarget, isInsideRoot } = await import('../scripts/check-sources.mjs');
+    assert.equal(normalizeRelTarget('methods/x.md'), 'methods/x.md');
+    assert.equal(normalizeRelTarget('methods/../x.md'), null);
+    assert.equal(normalizeRelTarget('methods\\x.md'), null);
+    assert.equal(normalizeRelTarget('/abs/x.md'), null);
+    assert.equal(normalizeRelTarget(''), null);
+    assert.equal(isInsideRoot('/root', '/root/methods/x.md'), true);
+    assert.equal(isInsideRoot('/root', '/root/../x.md'), false);
+  });
+});
 
 /* ------------------------------------------------------------------ */
 /* 负例：引擎版本与来源去向类型                                       */

@@ -43,15 +43,25 @@ function sectionEnd(lines, start, number) {
   return lines.length
 }
 
-const [target, fromArg, toArg] = process.argv.slice(2)
-if (target === undefined || fromArg === undefined) {
+const rawArgs = process.argv.slice(2)
+if (rawArgs.length < 2 || rawArgs.length > 3) {
   console.error(usage)
   process.exit(2)
 }
 
-const from = Number.parseInt(fromArg, 10)
-const to = toArg === undefined ? from : Number.parseInt(toArg, 10)
-if (!Number.isInteger(from) || !Number.isInteger(to) || from < 1 || to < from) {
+const [target, fromArg, toArg] = rawArgs
+// 只接受不带前缀的十进制正整数：'2junk' / '2.9' / '1e2' / '0' / '+2' 都是错误用法。
+// 先校验字符串再转数字——parseInt 会把上述全部「宽容」成 2，正是之前被静默吞掉的缺陷。
+const SECTION_ARG = /^[1-9]\d*$/
+
+if (!SECTION_ARG.test(fromArg) || (toArg !== undefined && !SECTION_ARG.test(toArg))) {
+  console.error('section: 节号必须是不带前缀的十进制正整数（如 2），且起始节不大于结束节')
+  process.exit(2)
+}
+
+const from = Number(fromArg)
+const to = toArg === undefined ? from : Number(toArg)
+if (!Number.isSafeInteger(from) || !Number.isSafeInteger(to) || to < from) {
   console.error('section: 节号必须是正整数，且起始节不大于结束节')
   process.exit(2)
 }

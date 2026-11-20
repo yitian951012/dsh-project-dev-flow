@@ -95,7 +95,7 @@ dsh-project-dev-flow/
 
 1. **人格段只留判定口径**：事实源、阶段路由、不可退让、交付、资源与占位符各一段，同一约束只出现一次。
 2. **方法按节读**：技能读方法时只取 §2 核心判断与 §3 步骤；§1 / §4 / §5 只在对应场景读，同一文件同一会话不重复读。
-3. **三簇重工具默认关闭**：定时任务、工作流编排、子代理 fork 与六阶段判定无关，默认不进入本模式的工具面。
+3. **与流程无关的工具不声明**：定时任务（`tool-schedule`）在 preset 内显式 `disabled: true`，已用隔离 profile 的 `--dump-config` 实测保留；工作流编排与子代理 fork 三簇**本包不声明、也无法在 preset 内关闭**——隔离 profile 实测：即使从本包删除，它们仍由宿主预设的默认工具集提供；在 preset 内写 `disabled: true` 会被合并逻辑丢弃。保留声明只会造成「看起来关了、实际没关」，所以本包改为不声明，并在 README 明确这条边界：要关它们只能在宿主 profile 层处理。
 
 按节读必须给可执行命令——只写「按节读」时，模型仍会整份读文件。在本包目录下：
 
@@ -108,7 +108,9 @@ node scripts/section.mjs design-and-invariants 2 3
 
 技能内调用同一脚本，写法是 `node <技能base>/../../scripts/section.mjs <方法名> 2 3`。
 
-需要恢复默认关闭的工具：在 `cordis.patch.yml` 删除对应项的 `disabled: true` 并重装；变更明细见 [CHANGELOG.md](CHANGELOG.md) 的 2.1.0。
+需要恢复定时任务工具：删除 `cordis.patch.yml` 中 `tool-schedule` 的 `disabled: true` 并重装。变更明细见 [CHANGELOG.md](CHANGELOG.md) 的 2.1.1。
+
+> 工具面能不能真的缩小，以隔离 profile 的 `dsh --profile <name> --dump-config` 为准；`check:patch` 只能证明「声明符合契约」，证明不了宿主会保留它——这正是 2.1.0 声称关闭三簇却未验证的地方。
 
 ## 6. 边界（重要）
 
@@ -123,12 +125,21 @@ node scripts/section.mjs design-and-invariants 2 3
 ## 7. 维护
 
 ```bash
-npm run validate       # 结构 + 内容红线 + 链接 + 篇幅
-npm run check:sources  # 源文档哈希是否漂移
-npm run check:patch    # bundle patch 的 YAML 结构门禁
-npm test               # 结构校验与 patch 校验的单元样本
-npm run test:source    # 来源登记集成样本
+npm ci                     # 安装作者侧固定依赖（yaml@2.9.1）
+npm run verify             # 一条管道跑完：结构 / 来源 / 锁 / patch / 测试 / 打包面
+npm run check:patch:ci     # CI 用：缺 YAML 解析器直接失败，不降级
+npm run check:sources      # 作者 / CI：缺 docs 即失败（安装态用 check:sources:portable）
+npm run smoke:profile      # 隔离 DSH_HOME 安装 → dump-config → 卸载，验装配与回滚
+npm run evidence           # 生成 evidence/release-<版本>.json|.md
+npm run metrics            # 2.0.1 ↔ 当前的声明面积对照
+npm run acceptance -- --profile <name>   # 真实会话验收：技能自动路由 + slash 显式调用
 ```
+
+`acceptance` 的前置条件是目标 profile 有一条**可用模型路由**（桌面端凭据不会自动注入 CLI）；脚本用 `--patch` 临时挂载本包技能目录，不改宿主 profile。返回码：0 通过、1 未命中、3 被凭据/适配器阻塞。
+
+发布前的最小证据链：`verify` 全绿 + `smoke:profile` 全绿 + 同一 commit 上生成 `evidence`。
+跨版本升级与回滚用 `node scripts/smoke-profile.mjs --upgrade-from <旧版本.tgz>`（先装旧包 → 装本包 → 回滚，核对版本号）。
+未跑真实会话时，只能写「包内验证与隔离装配通过，真实会话行为未验证」。
 
 新增内容前先读 [AUTHORING.md](AUTHORING.md)；源文档变更后必须重新评审提炼内容，而不是静默更新哈希。
 

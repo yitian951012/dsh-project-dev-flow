@@ -1,6 +1,6 @@
 # 内容编写规范（AUTHORING）
 
-> 本文件是插件内容的生产规范，不对外发布。任何作者（人或 agent）新增/修改 `methods/`、`templates/`、`cases/`、`skills/`、`skills/*/references/` 时必须遵守。
+> 本文件是插件内容的生产规范，面向内容维护者，随包发布（不进入默认会话上下文）。任何作者（人或 agent）新增/修改 `methods/`、`templates/`、`cases/`、`skills/`、`skills/*/references/` 时必须遵守。
 > 违反本规范的内容由 `scripts/validate-package.mjs` 拦下，不靠人工记忆。
 
 ---

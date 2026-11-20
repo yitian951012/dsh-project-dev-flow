@@ -40,17 +40,33 @@
 
 1. 模式选择器出现「项目开发流程」，且可选中。
 2. 技能目录出现包内 5 个技能：3 个可被模型自动路由，2 个仅用户显式调用。
-3. `/project-acceptance` 与 `/project-case-distill` 可显式调用；模型不会自动调用它们。
+3. 用真实会话验收脚本确认路由与 slash：
+   `node scripts/acceptance-session.mjs --profile <name>`（不改宿主 profile）。
+   它会跑两条不点名技能的治理/受理任务 + 一条 `/project-acceptance`，断言命中 `project-docs` / `project-intake` / `project-acceptance`；
+   返回 3 表示该 profile 没有可用模型路由，需先配置模型凭据。
 4. 计划模式可进入并退出；子代理控制工具面不含 `interrupt_agent`（`interrupt: false`）。
 5. Plugins 面板能打开详情页，标题、描述与 `detail/DETAIL.md` 正常显示。
 6. 在包目录执行 `node scripts/section.mjs design-and-invariants 2 3` 能打印该方法 §2–§3；只写「按节读」而没有可执行命令，不算通过。
-7. 工具面默认不含定时任务、工作流编排与子代理 fork；需要时按「关于 2.1.0」恢复。
+7. `dsh --profile <name> --dump-config` 的输出里，`tool-schedule` 带 `disabled: true`；工作流编排与子代理 fork 三项**不应出现在 preset 声明中**（出现即被 `check:patch` 判为不生效的关闭）。若要确认工具面，用真实会话的工具列表，不要只看 patch。
 
 `plan-mode` 的 `section` 采用官方预设全文；官方更新该段时需要同步本包文本，避免漂移。
 
 ## 回滚
 
-移除 2.0、重新安装 1.x 目录即可。已有项目文档不受影响——本插件从不写入目标项目文件，除非用户明确要求生成项目档案。
+移除 2.0、重新安装 1.x 目录即可。安装与卸载本身不写目标项目文件；但运行时的 agent 可能在宿主权限内、经你明确授权后写回项目档案、决策、索引或状态投影，**回滚不会撤销这些已发生的项目修改**——回滚前先确认要保留哪些文档变更。
+
+## 关于 2.1.1
+
+2.1.1 是正确性与证据闭环发布，不新增内容能力，preset id / 5 个技能 / 六阶段判定口径不变。从 2.1.0 升级：重装并走验证清单即可。
+
+行为差异：
+
+1. **作者侧依赖**：新增 `devDependencies.yaml`（2.9.1）与 `package-lock.json`；`npm ci` 后可脱离宿主解析器复现测试。
+2. **来源检查默认强制**：`npm run check:sources` 缺 docs 即失败；安装态请用 `npm run check:sources:portable`（输出「未验证」而不是「一致」）。
+3. **工具面**：只保留 `tool-schedule` 的显式关闭；fork / workflow 三簇由宿主默认提供，本包不声明也关不掉，需在宿主 profile 层处理。
+4. **新增命令**：`verify` / `smoke:profile` / `evidence` / `metrics`，用于生成可复核的发布证据；跨版本升级与回滚用 `node scripts/smoke-profile.mjs --upgrade-from <旧版本.tgz>`（Windows 上从 `link:` 切回 tarball 需先清理残留目录，脚本已内置）。
+
+> 2.1.0 曾声称「三簇重工具默认关闭」，2.1.1 的隔离 profile 实测证明该声明在宿主内不生效，故按事实修正；这不是功能回退，而是把不生效的声明去掉。
 
 ## 关于 2.1.0
 
@@ -58,7 +74,7 @@
 
 1. **人格段**：去重合并后同一约束只出现一次；项目侧若依赖旧措辞，需自行复核。
 2. **读取路径**：技能读方法改为按节读，命令见验证清单第 6 项。只写「按节读」而不给命令时不生效，这是实测结论。
-3. **工具面**：定时任务、工作流编排与子代理 fork 默认关闭；恢复时删除 `cordis.patch.yml` 对应项的 `disabled: true` 并重装。
+3. **工具面**：定时任务默认关闭（实测生效）；工作流编排与子代理 fork 三簇由宿主预设默认提供，本包既不声明也无法在 preset 内关闭（实测：删除声明后仍存在，写 `disabled: true` 会被丢弃）。要关闭它们只能在宿主 profile 层处理。
 
 旧会话保持启动时的 preset revision，不会热切换；回滚到 2.0.x 时移除 2.1.0、重装旧目录即可，项目文档不受影响。
 

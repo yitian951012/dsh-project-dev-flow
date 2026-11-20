@@ -52,8 +52,11 @@ export const SOURCE_RULES = Object.freeze({
   'SOURCE-UNREGISTERED': 'docs/ 下的文档未登记到 lock',
   'SOURCE-TARGET-MISSING': 'lock 目标文件尚不存在',
   'SOURCE-TARGET-ABSOLUTE': 'lock targets 写了绝对路径',
+  'SOURCE-TARGET-ESCAPE': 'lock targets 解析后逃出了 package 根',
+  'SOURCE-TARGET-SYNTAX': 'lock targets 含 . / .. / 空段或反斜杠',
   'SOURCE-TARGET-EMPTY': 'lock 声称提炼为模板/案例但没有目标文件',
   'SOURCE-TARGET-KIND': 'lock 声明的去向与目标目录类型不一致',
+  'SOURCE-DOCS-REQUIRED': '调用方要求必须验证来源，但找不到 docs/',
 });
 
 /* ------------------------------------------------------------------ */
@@ -177,6 +180,39 @@ export function renderDiagnostic(diag, painter = makePainter(false)) {
 }
 
 /* ------------------------------------------------------------------ */
+/* 目标路径安全                                                        */
+/* ------------------------------------------------------------------ */
+
+/**
+ * 把 targets 里的相对路径归一化；不安全则返回 null。
+ *
+ * 拒绝：绝对路径、Windows 盘符、反斜杠（避免「看起来像目录别名」的写法）、
+ * 空段、'.' 与 '..'。调用方据此在结构校验阶段就失败，而不是等到
+ * 存在性检查时被 `path.resolve` 悄悄解析到 package 根之外。
+ *
+ * @param {unknown} value
+ * @returns {string|null} 形如 'methods/xx.md'；不安全返回 null
+ */
+export function normalizeRelTarget(value) {
+  if (typeof value !== 'string') return null;
+  const text = value.trim();
+  if (!text) return null;
+  if (text.includes('\\')) return null;
+  if (path.isAbsolute(text) || /^[A-Za-z]:/.test(text)) return null;
+  const segments = text.split('/');
+  for (const segment of segments) {
+    if (segment === '' || segment === '.' || segment === '..') return null;
+  }
+  return segments.join('/');
+}
+
+/** 目标解析后是否仍在 package 根内（防 .. 与符号链接式逃逸的第一道闸）。 */
+export function isInsideRoot(rootAbs, resolvedAbs) {
+  const rel = path.relative(path.resolve(rootAbs), path.resolve(resolvedAbs));
+  return rel !== '' && !rel.startsWith('..') && !path.isAbsolute(rel);
+}
+
+/* ------------------------------------------------------------------ */
 /* lock 结构校验                                                       */
 /* ------------------------------------------------------------------ */
 
@@ -249,6 +285,12 @@ export function validateLockShape(lock) {
     }
     if (!Array.isArray(entry.targets) || entry.targets.some((t) => typeof t !== 'string')) {
       fail(`${where}.targets 必须是字符串数组`, '没有落地资产时写 []，不要写 null');
+    } else if (entry.targets.some((t) => normalizeRelTarget(t) === null)) {
+      const bad = entry.targets.filter((t) => normalizeRelTarget(t) === null);
+      fail(
+        `${where}.targets 含不安全相对路径：${bad.map((t) => JSON.stringify(t)).join('、')}`,
+        'targets 只能是包内相对路径：正斜杠、不含 . 或 .. 段、不以 / 或盘符开头、不得含反斜杠，如 methods/xx.md',
+      );
     } else if (['template', 'case'].includes(entry.disposition) && entry.targets.length === 0) {
       // 声称「提炼为模板/案例」却没有任何落点：要么补目标文件，要么改成 evidence / not-migrate
       fail(
@@ -260,7 +302,8 @@ export function validateLockShape(lock) {
     // disposition 与目标目录类型必须一致：method→methods/，template→templates/，case→cases/
     const kindDir = { method: 'methods/', template: 'templates/', case: 'cases/' }[entry.disposition];
     if (kindDir && entry.targets.length > 0) {
-      const ok = entry.targets.some((t) => String(t).replace(/\\/g, '/').startsWith(kindDir));
+      // 已经过 normalizeRelTarget：这里只可能是安全路径，startsWith 不会因 .. 逃逸而误判。
+      const ok = entry.targets.some((t) => normalizeRelTarget(t)?.startsWith(kindDir));
       if (!ok) {
         fail(
           `${where} 的 disposition=${entry.disposition}，但 targets 没有 ${kindDir} 下的落点`,
@@ -302,13 +345,17 @@ export function validateLockShape(lock) {
  * @returns {Promise<{ ok: boolean, errors: Array, warnings: Array, notes: Array,
  *   summary: object, root: string, docsRoot: string|null, lockPath: string }>}
  */
-export async function verifySources({ root, docsRoot = null, lockPath = null, lockText = null } = {}) {
+export async function verifySources({ root, docsRoot = null, lockPath = null, lockText = null, requireDocs = false } = {}) {
   const rootAbs = path.resolve(root ?? defaultRoot());
   const lockAbs = lockPath ? path.resolve(rootAbs, lockPath) : defaultLockPath(rootAbs);
   const lockRel = path.relative(rootAbs, lockAbs).replace(/\\/g, '/') || 'sources.lock.json';
   const errors = [];
   const warnings = [];
   const notes = [];
+  // 三态：passed（真的比对了）/ skipped（没有可比的源文档）/ failed（有错误）。
+  // 「跳过」与「一致」必须分开，否则错 root 或漏挂载会输出 green。
+  let verified = false;
+  let status = 'failed';
   // 必须在任何 return 之前声明：finish() 会引用它（早期返回也能安全收尾）。
   let docsAbs = docsRoot;
   const summary = {
@@ -326,15 +373,28 @@ export async function verifySources({ root, docsRoot = null, lockPath = null, lo
   if (!docsAbs) {
     const found = findDocsRoot({ root: rootAbs });
     if (found.dir) docsAbs = found.dir;
-    else {
+    else if (requireDocs) {
+      // 作者 / CI 场景：没有源文档就等于没有验证，绝不能输出「一致」。
+      errors.push({
+        severity: 'error',
+        rule: 'SOURCE-DOCS-REQUIRED',
+        file: lockRel,
+        line: null,
+        message: '未找到 docs/：来源登记无法比对，而本次调用要求必须验证',
+        fix: '用 --docs <dir> 或环境变量 DSH_FLOW_DOCS_DIR 指定 docs/；安装态确实没有源文档时改用 check:sources:portable，并明确标注「未验证」',
+      });
+      status = 'failed';
+      return finish();
+    } else {
       notes.push({
         severity: 'note',
         rule: 'SOURCE-DOCS-UNRESOLVED',
         file: lockRel,
         line: null,
-        message: '未找到 docs/，跳过来源登记比对（lock 只在有源文档时才有意义）',
-        fix: '用 --docs <dir> 或环境变量 DSH_FLOW_DOCS_DIR 指定 docs/ 后再跑',
+        message: '未找到 docs/，未执行哈希比对（这是「未验证」，不是「一致」）',
+        fix: '用 --docs <dir> 或环境变量 DSH_FLOW_DOCS_DIR 指定 docs/ 后再跑；作者与 CI 请用 --require-docs',
       });
+      status = 'skipped';
       return finish();
     }
   }
@@ -453,7 +513,19 @@ export async function verifySources({ root, docsRoot = null, lockPath = null, lo
         });
         continue;
       }
-      if (!existsSync(path.resolve(rootAbs, target))) missingTargets.push({ path: entry.path, target });
+      const resolvedTarget = path.resolve(rootAbs, target);
+      if (!isInsideRoot(rootAbs, resolvedTarget)) {
+        errors.push({
+          severity: 'error',
+          rule: 'SOURCE-TARGET-ESCAPE',
+          file: lockRel,
+          line: null,
+          message: `${entry.path} 的 target 解析后逃出 package 根：${target}`,
+          fix: 'targets 只写 package 内相对路径；禁止 .. 或盘符，避免指向包外文件',
+        });
+        continue;
+      }
+      if (!existsSync(resolvedTarget)) missingTargets.push({ path: entry.path, target });
     }
   }
   summary.targetsMissing = missingTargets.length;
@@ -469,15 +541,19 @@ export async function verifySources({ root, docsRoot = null, lockPath = null, lo
     });
   }
 
+  verified = true;
+  status = 'passed';
   return finish();
 
   function finish() {
     return {
       ok: errors.length === 0,
+      verified,
+      status,
       errors,
       warnings,
       notes,
-      summary,
+      summary: { ...summary, verified, status },
       root: rootAbs,
       docsRoot: docsAbs ?? null,
       lockPath: lockAbs,
@@ -498,6 +574,7 @@ const HELP = `核对 sources.lock.json 与 docs/ 的 sha256 是否一致（AUTHO
   --root <dir>      package 根目录（默认：脚本所在目录的上一级）
   --docs <dir>      docs/ 目录（默认：从 package 根向上查找最近的 docs/）
   --lock <file>     lock 文件（默认：<root>/sources.lock.json）
+  --require-docs    找不到 docs/ 时直接失败（作者 / CI 用；默认降级为「未验证」）
   --json            输出机器可读 JSON（自动关闭颜色与进度符号）
   --quiet           只输出结论与错误
   --no-color        强制纯文本（管道/重定向时已自动关闭颜色）
@@ -508,8 +585,8 @@ const HELP = `核对 sources.lock.json 与 docs/ 的 sha256 是否一致（AUTHO
   NO_COLOR           非空时禁用颜色
 
 退出码:
-  0  一致
-  1  漂移、未登记或结构错误
+  0  已比对且一致（或未加 --require-docs 时的「未验证」跳过）
+  1  漂移、未登记、结构错误，或 --require-docs 下找不到 docs/
   2  用法错误（参数拼错/缺值）
 
 示例:
@@ -530,6 +607,7 @@ function parseArgv(argv) {
     quiet: false,
     noColor: false,
     help: false,
+    requireDocs: false,
   };
   const takeValue = (index, flag) => {
     const value = argv[index];
@@ -542,6 +620,7 @@ function parseArgv(argv) {
       case '--root': opts.root = takeValue((i += 1), '--root'); break;
       case '--docs': opts.docs = takeValue((i += 1), '--docs'); break;
       case '--lock': opts.lock = takeValue((i += 1), '--lock'); break;
+      case '--require-docs': opts.requireDocs = true; break;
       case '--json': opts.json = true; break;
       case '--quiet': opts.quiet = true; break;
       case '--no-color': opts.noColor = true; break;
@@ -573,19 +652,26 @@ export async function runCli(argv = process.argv.slice(2), io = process) {
   }
 
   const painter = makePainter(!opts.noColor && colorEnabled(io.stdout, argv));
-  const result = await verifySources({ root: opts.root ?? defaultRoot(), docsRoot: opts.docs, lockPath: opts.lock });
+  const result = await verifySources({
+    root: opts.root ?? defaultRoot(),
+    docsRoot: opts.docs,
+    lockPath: opts.lock,
+    requireDocs: opts.requireDocs,
+  });
 
   if (opts.json) {
-    const { root, docsRoot, lockPath, ok, errors, warnings, notes, summary } = result;
-    io.stdout.write(`${JSON.stringify({ ok, root, docsRoot, lockPath, errors, warnings, notes, summary }, null, 2)}\n`);
+    const { root, docsRoot, lockPath, ok, verified, status, errors, warnings, notes, summary } = result;
+    io.stdout.write(`${JSON.stringify({ ok, verified, status, root, docsRoot, lockPath, errors, warnings, notes, summary }, null, 2)}\n`);
   } else {
     const diags = opts.quiet ? result.errors : [...result.errors, ...result.warnings];
     for (const diag of diags) io.stdout.write(`${renderDiagnostic(diag, painter)}\n`);
     if (!opts.quiet) {
       for (const note of result.notes) io.stdout.write(`${painter.dim(`ℹ [${note.rule}] ${note.message}`)}\n`);
     }
-    const line =
-      result.ok
+    // 「跳过」必须显式说成「未验证」：否则错 root / 漏挂载会输出一行绿色的「一致」。
+    const line = result.status === 'skipped'
+      ? painter.yellow(`⚠ 未验证：没有可比的 docs/，未执行来源哈希比对（lock 登记 ${result.summary.lockEntries} 条未校验）`)
+      : result.status === 'passed'
         ? painter.green(`✔ sources 一致：${result.summary.docs ?? 0} 份文档 / ${result.summary.lockEntries} 条登记`)
         : painter.red(`✗ sources 漂移：${result.errors.length} 个错误，${result.summary.hashMismatch} 处哈希不一致`);
     if (!opts.quiet) io.stdout.write(`\n${line}\n`);

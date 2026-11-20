@@ -15,6 +15,10 @@ coverage/
 *.key
 *.pem
 
+# 主密钥与轮换备份：*.key 不匹配以点开头且带日期后缀的文件名（历史项目确实产生过这类文件）
+.secret-key
+.secret-key.bak-*
+
 # 日志与工具缓存
 *.log
 npm-debug.log*

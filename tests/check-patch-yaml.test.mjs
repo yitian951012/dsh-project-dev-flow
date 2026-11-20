@@ -547,7 +547,20 @@ async function makePackage(patchText) {
   return root;
 }
 
-function run(args, { env = process.env, cwd = PLUGIN_ROOT } = {}) {
+/**
+ * 作者侧环境：强制使用包内固定依赖 node_modules/yaml，不再依赖宿主 profile 里的解析器。
+ * 这样「干净机器 + npm ci」能复现同一结果；宿主侧解析器只作为额外的候选位置。
+ */
+const AUTHOR_ENV = {
+  ...process.env,
+  DSH_FLOW_YAML_PARSER: path.join(PLUGIN_ROOT, 'node_modules'),
+  DSH_PROFILE_DIR: '',
+  DSH_HOME: '',
+  DSH_INSTALL_DIR: '',
+  NODE_PATH: '',
+};
+
+function run(args, { env = AUTHOR_ENV, cwd = PLUGIN_ROOT } = {}) {
   return spawnSync(process.execPath, [SCRIPT, ...args], { cwd, encoding: 'utf8', env });
 }
 
@@ -796,5 +809,97 @@ describe('正例：prompt 段不带花括号', () => {
       0,
     );
     assert.equal(result.errors.length, 0);
+  });
+});
+
+/* ------------------------------------------------------------------ */
+/* 2.1.0 算力预算与 !!js 表达式                                        */
+/* ------------------------------------------------------------------ */
+
+describe('负例：默认关闭的工具簇被重新启用', () => {
+  it('tool-schedule 缺 disabled: true → PATCH-TOOL-DISABLED', () => {
+    const patch = mutate((value) => {
+      const preset = value[0].insert[0];
+      preset.config.plugins.push({ id: 'tool-schedule', name: '@deepseek-ai/dsh-tool-schedule' });
+    });
+    const result = validatePatchStructure(patch);
+    assert.ok(rulesOf(result).includes('PATCH-TOOL-DISABLED'), JSON.stringify(result.errors, null, 2));
+  });
+
+  it('tool-schedule 的 disabled 被改成 false 同样失败', () => {
+    const patch = mutate((value) => {
+      const preset = value[0].insert[0];
+      preset.config.plugins.push({ id: 'tool-schedule', name: '@deepseek-ai/dsh-tool-schedule', disabled: false });
+    });
+    const result = validatePatchStructure(patch);
+    assert.ok(rulesOf(result).includes('PATCH-TOOL-DISABLED'), JSON.stringify(result.errors, null, 2));
+  });
+
+  it('显式 disabled: true 通过（控制组）', () => {
+    const patch = mutate((value) => {
+      const preset = value[0].insert[0];
+      preset.config.plugins.push({ id: 'tool-schedule', name: '@deepseek-ai/dsh-tool-schedule', disabled: true });
+    });
+    const result = validatePatchStructure(patch);
+    assert.equal(rulesOf(result).includes('PATCH-TOOL-DISABLED'), false);
+  });
+
+  it('声明 workflow-ptc / tool-workflow / fork → PATCH-TOOL-INEFFECTIVE-DISABLE', () => {
+    for (const [id, name] of [
+      ['workflow-ptc', '@deepseek-ai/dsh-workflow-ptc'],
+      ['tool-workflow', '@deepseek-ai/dsh-tool-workflow'],
+      ['tool-subagent-fork', '@deepseek-ai/dsh-tool-subagent'],
+    ]) {
+      const patch = mutate((value) => {
+        const preset = value[0].insert[0];
+        preset.config.plugins.push({ id, name, disabled: true });
+      });
+      const result = validatePatchStructure(patch);
+      assert.ok(
+        rulesOf(result).includes('PATCH-TOOL-INEFFECTIVE-DISABLE'),
+        `${id} 应被判定为不生效的关闭：${JSON.stringify(result.errors, null, 2)}`,
+      );
+    }
+  });
+});
+
+describe('负例：!!js 表达式横向逃逸', () => {
+  it('含 child_process / execSync 的表达式 → PATCH-JS-EXPRESSION', () => {
+    const rawText = [
+      '- insert:',
+      '    - id: skill-filesystem',
+      '      name: "@deepseek-ai/dsh-skill-filesystem"',
+      '      config:',
+      '        customSkillDirs:',
+      "          - !!js require('node:child_process').execSync('whoami') + 'skills'",
+    ].join('\n');
+    const result = validatePatchStructure([], { rawText });
+    assert.ok(rulesOf(result).includes('PATCH-JS-EXPRESSION'), JSON.stringify(result.errors, null, 2));
+    assert.equal(result.errors.find((e) => e.rule === 'PATCH-JS-EXPRESSION').line, 6);
+  });
+
+  it('process.env / fetch / eval / Function 同样拒绝', () => {
+    for (const expr of ["process.env.HOME + '/skills'", "fetch('https://x')", "eval('1')", "new Function('return 1')"]) {
+      const result = validatePatchStructure([], { rawText: `- insert:\n  - id: x\n    name: y\n    config:\n      - !!js ${expr}` });
+      assert.ok(rulesOf(result).includes('PATCH-JS-EXPRESSION'), `应拒绝 ${expr}`);
+    }
+  });
+
+  it('平台判定与包内路径解析通过（控制组）', () => {
+    for (const expr of ["process.platform === 'win32'", "process.platform !== 'win32'", "path.join(pkgRoot, 'skills')"]) {
+      const result = validatePatchStructure([], { rawText: `- insert:\n  - id: x\n    name: y\n    config:\n      - !!js ${expr}` });
+      assert.equal(rulesOf(result).includes('PATCH-JS-EXPRESSION'), false, `不应拒绝 ${expr}`);
+    }
+  });
+});
+
+describe('正例：本仓库真实 patch 的算力预算契约', () => {
+  it('四个工具簇均显式 disabled，三条表达式均在允许清单内', () => {
+    const result = run(['--root', PLUGIN_ROOT, '--json']);
+    assert.equal(result.status, 0, result.stderr);
+    const payload = JSON.parse(result.stdout);
+    assert.equal(payload.errors.length, 0, JSON.stringify(payload.errors, null, 2));
+    assert.equal(payload.summary.disabledTools, 1, JSON.stringify(payload.summary));
+    assert.equal(payload.summary.jsExpressions, 3, JSON.stringify(payload.summary));
   });
 });

@@ -16,6 +16,7 @@ commands:
   test: "{{command:test}}"
   build: "{{command:build}}"
   e2e: "{{command:e2e}}"
+  gate: "{{command:gate}}"
 
 docs:
   root: "{{doc:root}}"
@@ -27,10 +28,14 @@ roles:
   approver: "{{role:approver}}"
   owner: "{{role:owner}}"
 
+acceptance:
+  checklist: "{{doc:acceptance-checklist}}"
+  approver: "{{role:approver}}"
+
 evidence:
   ttl: "{{evidence:ttl}}"
   levels: unverified        # 项目自己的验收分级定义
-  proxySignoff: false       # 是否允许代理签认；默认 false，只允许显式策略
+  # 代理签认不设本表字段：模板 §4 明确要求引用项目书面策略，不在 profile 里新开例外。
 
 forbidden:
   - 改测试 / 判据 / 门禁配置来让红灯变绿

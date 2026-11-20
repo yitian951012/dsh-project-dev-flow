@@ -28,7 +28,7 @@ disable-model-invocation: false
 5. 写受理单：字段以 `references/intake-checklist.md` 的九项必填为准（该表即表单，不另设模板），逐项填并在输出里标「缺项」。
 6. 判据必须落到可执行命令（{{command:verify}} / {{command:test}} / {{command:e2e}}）或可观察事实；两者都做不到时写「人工判据 + 判定人」。
 7. 拆最小可交付批次：一个批次只解决一条判据，批次间可独立验证。
-8. 范围外的一律写入不做清单与待裁决项，不在本批内暗中扩；已明确不做只记不做清单（写理由与重启条件），尚未决定只记待裁决项，两处不得双重记账；归口规则见 `../../methods/truth-and-lifecycle.md`，互斥规则见 `../../methods/intake-and-decision.md` §3，处置流程见 `references/scope-guard.md`。
+8. 范围外先分类，二选一归口，不在本批内暗中扩：**已明确不做** → 只记不做清单（写理由与重启条件）；**尚未决定** → 只记待裁决项。两处不得双重记账。归口规则见 `../../methods/truth-and-lifecycle.md`，互斥规则见 `../../methods/intake-and-decision.md` §3，处置流程见 `references/scope-guard.md`。
 9. 有「待确认」项时只输出提问清单并停下，不自行补全需求。
 
 ## 输出

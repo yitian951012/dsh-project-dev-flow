@@ -53,7 +53,75 @@ export const PATCH_RULES = Object.freeze({
   'PATCH-SECTION': 'plan-mode.section 为空',
   'PATCH-SUBAGENT': 'tool-subagent-control 缺少 interrupt: false',
   'PATCH-PROMPT-PLACEHOLDER': 'prompt 段（persona prefix/suffix、plan-mode section）含 {{：装配期会被当系统提示变量引用',
+  'PATCH-TOOL-DISABLED': '算力预算要求默认关闭的工具簇被重新启用',
+  'PATCH-TOOL-INEFFECTIVE-DISABLE': '声明了宿主会丢弃 disabled 的工具项（等于没关）',
+  'PATCH-JS-EXPRESSION': '!!js 表达式超出允许清单或含危险调用',
 });
+
+/**
+ * 2.1.0 的算力预算默认关闭这几个与六阶段判定无关的工具簇。
+ * 只在本 preset 里出现了才检查：没有安装就不会占用工具块。
+ */
+const DEFAULT_DISABLED_TOOLS = Object.freeze([
+  // 只有这一项在真实宿主 dump 中可验证地生效（2026-11-20 隔离 profile 实测）。
+  { id: 'tool-schedule', name: '@deepseek-ai/dsh-tool-schedule' },
+]);
+
+/**
+ * 这三个 id 若出现在 preset 里，会与宿主预设的默认工具合并，disabled 被丢弃。
+ * 因此本包不再声明它们；出现即说明有人把「不生效的关闭」加了回来。
+ */
+const FORBIDDEN_TOOL_DECLARATIONS = Object.freeze([
+  'tool-subagent-fork',
+  'workflow-ptc',
+  'tool-workflow',
+]);
+
+/** 危险调用一律拒绝；允许的只有平台判定与包内技能目录解析。 */
+const JS_DENY = Object.freeze([
+  /child_process/,
+  /\bexec(?:Sync)?\s*\(/,
+  /\bspawn(?:Sync)?\s*\(/,
+  /\beval\s*\(/,
+  /\bnew\s+Function\b/,
+  /\bfetch\s*\(/,
+  /\brequire\s*\(/,
+  /node:(?:http|https|net|fs|child_process)/,
+  /\bprocess\.env\b/,
+  /\bwriteFile(?:Sync)?\s*\(/,
+  /\breadFile(?:Sync)?\s*\(/,
+  /\bunlink(?:Sync)?\s*\(/,
+  /\brm(?:Sync)?\s*\(/,
+  /\brmdir(?:Sync)?\s*\(/,
+]);
+
+/**
+ * !!js 表达式允许清单。
+ * 解析期不求值，因此只能做**静态**判定：要么是平台判定，要么是指向包内 skills/ 的路径解析；
+ * 其余一律拒绝——含危险调用的表达式不应因为「夹带了字符串 skills」就通过。
+ *
+ * @param {string} text 表达式原文（可带引号）
+ * @returns {boolean}
+ */
+export function isAllowedJsExpression(text) {
+  const raw = String(text ?? '').trim();
+  if (!raw) return false;
+
+  // YAML 里可能给整段表达式加引号。只有「两端成对」才算外层引号；
+  // 不能无差别地去掉末尾引号——那会把 process.platform === 'win32' 变成未闭合的字符串。
+  const candidates = [raw];
+  const quoted = (raw.startsWith('"') && raw.endsWith('"')) || (raw.startsWith("'") && raw.endsWith("'"));
+  if (quoted && raw.length > 2) candidates.push(raw.slice(1, -1).trim());
+
+  return candidates.some((expr) => {
+    if (JS_DENY.some((re) => re.test(expr))) return false;
+    if (/^process\.platform\s*(?:===|!==)\s*['"]win32['"]$/.test(expr)) return true;
+    if (expr.startsWith("process.getBuiltinModule('node:path').join(") && expr.includes("'skills'")) return true;
+    // 测试夹具用的最小形态：仅拼包根与 skills 目录，无任何外部调用。
+    if (/^path\.join\(pkgRoot,\s*['"]skills['"]\)$/.test(expr)) return true;
+    return false;
+  });
+}
 
 /* ------------------------------------------------------------------ */
 /* 基础工具                                                           */
@@ -198,6 +266,8 @@ export function validatePatchStructure(value, { file = 'cordis.patch.yml', locat
     interrupt: undefined,
     degradedTags: 0,
     promptPlaceholders: 0,
+    disabledTools: 0,
+    jsExpressions: 0,
   };
 
   const lineFor = (segments) => {
@@ -242,6 +312,27 @@ export function validatePatchStructure(value, { file = 'cordis.patch.yml', locat
       '预期行为：无需改；本工具按字符串处理该值。若要精确类型校验，把它换成静态值（编译期可判定的写法）',
       tag.line ?? null,
     );
+  }
+
+  /* ---- 0) !!js 表达式允许清单（先于结构早退，坏结构也要查） ------------------ */
+
+  if (typeof rawText === 'string') {
+    const sourceLines = rawText.split(/\r?\n/);
+    for (let index = 0; index < sourceLines.length; index += 1) {
+      const at = sourceLines[index].indexOf('!!js');
+      if (at < 0) continue;
+      const expression = sourceLines[index].slice(at + 4).trim();
+      summary.jsExpressions += 1;
+      if (!isAllowedJsExpression(expression)) {
+        fail(
+          'PATCH-JS-EXPRESSION',
+          [],
+          `第 ${index + 1} 行的 !!js 表达式不在允许清单：${expression.slice(0, 100)}`,
+          'patch 会在安装/激活期求值。只允许 process.platform 判定或指向包内 skills/ 的 process.getBuiltinModule 路径解析；其它表达式（child_process / exec / spawn / eval / Function / fetch / process.env / 文件读写）一律拒绝',
+          index + 1,
+        );
+      }
+    }
   }
 
   /* ---- 1) 顶层：单条 insert ------------------------------------------------ */
@@ -511,6 +602,36 @@ export function validatePatchStructure(value, { file = 'cordis.patch.yml', locat
     } else {
       summary.interrupt = false;
     }
+  }
+
+  /* ---- 7) 算力预算：与流程无关的工具簇不得被重新启用 ---------------------- */
+
+  for (const tool of DEFAULT_DISABLED_TOOLS) {
+    const owner = items.find((entry) => !entry.isPreset && entry.id === tool.id);
+    if (!owner) continue; // 未随本 preset 安装：工具本来就不会出现在工具面
+    if (owner.item.disabled !== true) {
+      fail(
+        'PATCH-TOOL-DISABLED',
+        [...owner.path, 'disabled'],
+        `${tool.id} 属于 2.1.0 默认关闭的工具簇，但当前没有 disabled: true（实际 ${JSON.stringify(owner.item.disabled)}）`,
+        '补 disabled: true；需要恢复时按 CHANGELOG 2.1.0 / README §5 删除该行并重装，不要把「整项删除」与「显式关闭」混为一谈',
+      );
+    } else {
+      summary.disabledTools += 1;
+    }
+  }
+
+  // 这三项即使写 disabled: true，也会被宿主预设合并逻辑丢弃（2026-11-20 实测）。
+  // 出现即视为「不生效的关闭」：要缩小工具面，正确做法是不声明，而不是写一条假关闭。
+  for (const id of FORBIDDEN_TOOL_DECLARATIONS) {
+    const owner = items.find((entry) => !entry.isPreset && entry.id === id);
+    if (!owner) continue;
+    fail(
+      'PATCH-TOOL-INEFFECTIVE-DISABLE',
+      owner.path,
+      `${id} 出现在 preset 中：宿主会与默认工具合并并丢弃 disabled，声明关闭不会生效`,
+      '从 preset 删除该项（不安装即不占工具块）；若宿主 profile 另行启用了它，到宿主侧关闭，不要在本包写一条不生效的 disabled',
+    );
   }
 
   return finish();
@@ -967,7 +1088,7 @@ export async function checkPatch({ root, patch = null, env = process.env, requir
     errors: [],
     warnings: [],
     notes: [],
-    summary: { presetId: null, presetItemId: null, pluginCount: 0, uniqueIdCount: 0, duplicateIdCount: 0, customSkillDirs: null, sectionChars: null, interrupt: undefined, degradedTags: 0 },
+    summary: { presetId: null, presetItemId: null, pluginCount: 0, uniqueIdCount: 0, duplicateIdCount: 0, customSkillDirs: null, sectionChars: null, interrupt: undefined, degradedTags: 0, disabledTools: 0, jsExpressions: 0 },
     parser: { ok: false, reason: 'missing', message: '', fix: '', name: null, version: null, resolved: null, source: null, searched: [] },
   };
 

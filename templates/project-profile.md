@@ -43,7 +43,7 @@ review_after: 2027-05-01
 | 单元测试 | {{command:test}} | 待核 | 未跑 |
 | 构建 | {{command:build}} | 待核 | 未跑 |
 | 端到端 | {{command:e2e}} | 待核 | 未跑 |
-| 一键门禁 | 待填 | 待核 | 未跑 |
+| 一键门禁 | {{command:gate}} | 待核 | 未跑 |
 
 规则：
 
@@ -64,6 +64,7 @@ review_after: 2027-05-01
 
 | 规则 | 本项目取值 | 依据 |
 | :--- | :--- | :--- |
+| 验收清单 | {{doc:acceptance-checklist}} | 项目验收文档 |
 | 证据有效期 | {{evidence:ttl}} | 项目验收文档 |
 | 验收级别定义 | 待填 | 验收手册 |
 | 允许的签认人 | {{role:approver}} | 协作约定 |
