@@ -1,6 +1,6 @@
 # 真实会话验收：@yitian951012/dsh-project-dev-flow@2.1.1
 
-> 时间：2026-11-20T09:00:15.039Z · profile：`headless` · 结论：**blocked**
+> 时间：2026-11-20T10:51:44.162Z · profile：`headless` · 结论：**blocked**
 
 模型凭据未注入 CLI：任务未真正执行，不能记为通过
 

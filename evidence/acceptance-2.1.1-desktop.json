@@ -1,0 +1,115 @@
+{
+  "generatedAt": "2026-11-20T10:52:46.706Z",
+  "package": "@yitian951012/dsh-project-dev-flow",
+  "version": "2.1.1",
+  "git": {
+    "commit": "8c84fbe",
+    "tag": "v2.1.1",
+    "describe": "v2.1.1-0-g8c84fbe",
+    "worktree": "clean"
+  },
+  "executionSurface": "桌面宿主真会话（任务看板派发，mode=project-dev-flow）",
+  "recordedBy": "session-e742eb1b-f5d3-41fb-b0d3-436d1e8db0b0（agent 起草，非签认）",
+  "standardFlow": {
+    "basis": [
+      "context7 /deepseek-ai/deepseek-harness → docs/subsystems/skills.md（会话技能目录 + skill 工具契约）",
+      "…/packages/skill/tool-skill/README.md（/name 直接用户输入在 pre-step 注入 <skill_content>）",
+      "…/packages/bundle/headless/README.md（--json NDJSON 事件流：session/status/tool_call/tool_result/final）"
+    ],
+    "assertion": [
+      "自动路由 = 真实会话内出现 tool/call，name=skill，arguments.name=期望技能",
+      "斜杠注入 = 直接用户输入里的 /name 在 pre-step 注入 <skill_content>（user 角色），模型无需再调 skill",
+      "project-acceptance / project-case-distill 带 disable-model-invocation：不进目录、skill 工具不可见，只能由 /name 注入"
+    ]
+  },
+  "cliPath": {
+    "command": "node scripts/acceptance-session.mjs",
+    "exit": 3,
+    "status": "blocked",
+    "reasonCode": "MISSING_CREDENTIAL",
+    "route": "deepseek-official",
+    "note": "本次复跑仍在凭据处阻塞；同目录 acceptance-2.1.1.json|md 为该路径证据，未改动"
+  },
+  "prerequisite": {
+    "probeSessionId": "session-56ff8427-ea61-427d-a8f4-64ca4028f6bf",
+    "agentPreset": "project-dev-flow",
+    "skillNamesInContext": [
+      "project-dev-flow",
+      "project-docs",
+      "project-intake",
+      "project-acceptance",
+      "project-case-distill"
+    ],
+    "note": "探针只证明装配与宿主凭据可用，不承担验收判据"
+  },
+  "tasks": [
+    {
+      "id": "route-docs",
+      "kind": "route",
+      "expect": "project-docs",
+      "prompt": "这个仓库的文档有点乱，同一件事写在好几处，文档和代码也开始对不上了。帮我梳理一下该怎么治理。",
+      "boardCardId": "0665cb3f-1f2d-43e7-9dbd-a83cf66da88b",
+      "sessionId": "session-b0061569-b303-4c0e-a292-8b30e2a9055e",
+      "agentPreset": "project-dev-flow",
+      "toolCallCount": 29,
+      "toolsUsed": ["skill", "working_directory", "pwsh", "glob", "read", "todo_write", "grep"],
+      "skillToolCall": { "arguments": { "name": "project-docs" } },
+      "finalTextChars": 5684,
+      "boardResult": "succeeded",
+      "verdict": "passed"
+    },
+    {
+      "id": "route-intake",
+      "kind": "route",
+      "expect": "project-intake",
+      "prompt": "我们要给插件加一个导出功能，你先把需求接下来：判断类型、列出判据和需要谁拍板。",
+      "boardCardId": "4a0cbef0-63d4-40e9-88cf-482fbd68068f",
+      "sessionId": "session-e83600d4-ac66-4c76-a3fc-6be80c0f7f81",
+      "agentPreset": "project-dev-flow",
+      "toolCallCount": 17,
+      "toolsUsed": ["skill", "pwsh", "glob", "read", "grep", "ask_user_question"],
+      "skillToolCall": { "arguments": { "name": "project-intake" } },
+      "finalTextChars": 0,
+      "blockingToolCall": "ask_user_question",
+      "blockingReason": "对象歧义：题面里的「插件」指哪个包，以及导出对象与出口形态（判据归属层由此决定），按技能要求必须由人拍板",
+      "boardResult": "cancelled",
+      "boardResultDetail": "由 agent 用 settle 关闭未观察到的执行，无人类应答；不记为通过",
+      "verdict": "hit_but_unfinished"
+    },
+    {
+      "id": "slash-acceptance",
+      "kind": "slash",
+      "expect": "project-acceptance",
+      "prompt": "/project-acceptance 给出三条交付判定要点，并说明需要哪些证据。",
+      "boardCardId": "7fcf2de6-5ee4-4b74-b98b-b8ec74514d85",
+      "sessionId": "session-976f8cee-deb0-47e1-a006-ca0628959ce8",
+      "agentPreset": "project-dev-flow",
+      "toolCallCount": 17,
+      "toolsUsed": ["pwsh", "read", "glob", "grep"],
+      "skillToolCall": null,
+      "injectedSkillContent": {
+        "recordType": "user/message",
+        "seq": 20,
+        "contains": "<skill_content> + <skill_instructions> + 「# 验收与交付」正文",
+        "baseDir": "skills/project-acceptance"
+      },
+      "finalTextChars": 3388,
+      "boardResult": "succeeded",
+      "verdict": "passed"
+    }
+  ],
+  "verdictCounts": { "passed": 2, "hit_but_unfinished": 1, "failed": 0 },
+  "status": "partial",
+  "summary": "路由 2/2 命中并终答；斜杠 1/1 注入并终答；受理任务命中但等待人工拍板而未终答 → 整项不记 passed",
+  "deviations": [
+    "会话 cwd 为工作区根，不是插件根；三条 prompt 与 scripts/acceptance-session.mjs 逐字一致",
+    "会话经任务看板派发，比 CLI 多一层看板上下文",
+    "模型路由为宿主路由（huoshan / deepseek-v4.1-flash），CLI 默认路由为 deepseek-official",
+    "未改动任何判据、测试、CI、守卫"
+  ],
+  "limits": [
+    "route-intake 未终答：命中证据只覆盖「选对了技能」，不覆盖「把受理表交付完」",
+    "三项均为单次采样，不构成稳定性结论",
+    "本文件由 agent 起草，签认与入库待人决定"
+  ]
+}
