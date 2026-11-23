@@ -1,0 +1,65 @@
+{
+  "generatedAt": "2026-11-23T13:40:00.000Z",
+  "package": "@yitian951012/dsh-project-dev-flow",
+  "version": "2.1.3",
+  "subject": "DSH 0.2.3-alpha.2 适配修正（取代 2.1.2 的声明口径）",
+  "decision": "DEC-013 + DEC-014（项目决策登记 docs/02，2.1.3 为修正版；v2.1.2 tag 不移动）",
+  "commit": "8e87e98",
+  "predecessorCommit": "b03af91",
+  "runtime": {
+    "dsh": "0.2.3-alpha.2",
+    "node": "24.22.3",
+    "npm": "11.19.1",
+    "pnpm": "11.28.5"
+  },
+  "engines": {
+    "dsh": ">=0.2.2-rc.1 <0.3.0",
+    "node": "^24.22.3 || >=26.13.1"
+  },
+  "semverProbe": {
+    "tool": "npm 自带 semver 副本（node_modules/npm/node_modules/semver）",
+    "nodeFloorVerdicts": {
+      "24.22.2": false,
+      "24.22.3": true,
+      "25.8.0": false,
+      "26.0.0": false,
+      "26.12.0": false,
+      "26.13.1": true
+    },
+    "dshRangeVerdicts": {
+      "0.2.2-rc.1": { "default": true, "includePrerelease": true },
+      "0.2.3-alpha.2": { "default": false, "includePrerelease": true },
+      "0.3.0-alpha.1": { "default": false, "includePrerelease": true },
+      "0.3.0": { "default": false, "includePrerelease": false }
+    },
+    "note": "DSH 实际门禁用 includePrerelease:true（plugin-compatibility.ts），故 0.2.3-alpha.2 被覆盖；0.3.0-alpha.x 同样会被装入但未验证；0.3.0 正式版被拒"
+  },
+  "expertFindingsResolution": [
+    { "id": "P0-1", "finding": "证据/CHANGELOG 写 tests=165、pack=70（实际 168/72）", "fix": "2.1.3 证据与 CHANGELOG 全部带树标签并使用实测值；2.1.2 证据加更正说明", "evidence": "release-2.1.3.json（tests 170 / pack 72，证据入库前）、CHANGELOG 2.1.3 第 7 条" },
+    { "id": "P0-2", "finding": "verify.mjs 计数正则只认 '#'，Node 24 输出 'ℹ'", "fix": "正则扩为 ^(?:# |ℹ )；新增 resolveDshVersion() 注入 validate；载荷加 dshVersion，解析不到进 notVerified", "evidence": "scripts/verify.mjs；`node scripts/verify.mjs` exit 0 且打印「目标 DSH 运行时：0.2.3-alpha.2」" },
+    { "id": "P0-3", "finding": "MIGRATION 把 engines.node 记成 2.0 已有", "fix": "该行移出 1.x→2.0 表，改为「2.1.2 起（2.1.3 收紧）」注记并新增「关于 2.1.3」", "evidence": "MIGRATION.md 表下注记 + 关于 2.1.3 小节" },
+    { "id": "P0-4", "finding": "0.3.0 边界与证据自相矛盾", "fix": "README/DETAIL/MIGRATION/CHANGELOG 统一写「0.3.0 正式版被拒；0.3.0-alpha.x 因 includePrerelease 仍会装入且未验证」", "evidence": "semverProbe.dshRangeVerdicts" },
+    { "id": "P0-5", "finding": "Node 地板测试只校验前缀（>=24.22.3 <24 也能通过）", "fix": "改用 engineSatisfies 的区间判定：24.22.3 接受、24.22.2 拒绝、26.13.1 接受、26.12.0 拒绝；另有 0.3.0-alpha.1 作为已知边界的显式断言", "evidence": "tests/contract-consistency.test.mjs" },
+    { "id": "P1-6", "finding": "engines.node 比 DSH 地板宽（放行 25.x / 26.0-26.12）", "fix": "收紧为 ^24.22.3 || >=26.13.1（与 DSH upgrade-guide 原文一致）", "evidence": "package.json + semverProbe 的 25.8.0 / 26.12.0 = false" },
+    { "id": "P1-7", "finding": "package-lock.json 停留在 2.1.1 且缺 engines.node", "fix": "npm install --package-lock-only 重新生成", "evidence": "package-lock.json（2.1.3 + engines.node）" },
+    { "id": "P1-8", "finding": "Cordis 版本号写成 4.0.0-rc.12，实测装配 4.2.0-alpha.1", "fix": "文档改为实测值，4.0.0-rc.12 标为 0.2.3-alpha.1 时期", "evidence": "CHANGELOG 2.1.3 第 4 条" },
+    { "id": "P1-9", "finding": "证据称 working_directory 的 git grep 无命中，实际命中历史证据文件", "fix": "改为精确范围陈述", "evidence": "`git grep -n working_directory -- cordis.patch.yml skills methods templates config` → exit 1（无命中）；全仓库命中仅 CHANGELOG（修正说明）与 evidence/acceptance-2.1.1-desktop.json（历史 toolsUsed）" },
+    { "id": "P1-10", "finding": "证据链接 ../../docs 在包内是断链", "fix": "2.1.3 证据不再链接包外路径，改为内联决策号与要点", "evidence": "本文件与 compat-2.1.3-dsh-0.2.3-alpha.2.md" },
+    { "id": "P1-11", "finding": "证据 generatedAt 早于所引提交", "fix": "先提交修正（b03af91 / 8e87e98），再在干净树上生成证据", "evidence": "release-2.1.3.json：commit=8e87e98、clean=true" },
+    { "id": "P1-12", "finding": "缺 release-2.1.2/2.1.3 发布证据", "fix": "补跑 scripts/release-evidence.mjs（并在其输出中补 engines.node）", "evidence": "evidence/release-2.1.3.json|md，exit 0" },
+    { "id": "P2-13", "finding": "YAML 解析器探针永久「未验证」", "fix": "改为直读 node_modules/yaml/package.json", "evidence": "release-2.1.3.md 显示 2.9.1" }
+  ],
+  "checks": [
+    { "id": "dsh-version", "command": "dsh --version", "exit": 0, "observed": "0.2.3-alpha.2" },
+    { "id": "smoke-profile", "command": "node scripts/smoke-profile.mjs", "exit": 0, "observed": "12 项断言全过（安装 / dump-config / preset 装配 / 模式名 / tool-schedule disabled / 三簇未声明 / 卸载回滚）" },
+    { "id": "verify", "command": "node scripts/verify.mjs", "exit": 0, "observed": "七步全绿；tests=170 pass=170；test:source 2/2；pack 72（证据入库前）" },
+    { "id": "semver-probe", "command": "node -e 使用 npm 自带 semver 复核 engines 区间", "exit": 0, "observed": "见 semverProbe" },
+    { "id": "release-evidence", "command": "node scripts/release-evidence.mjs", "exit": 0, "observed": "commit=8e87e98 clean=true yaml=2.9.1" }
+  ],
+  "notVerified": [
+    "0.2.3-alpha.2 上的真实会话技能自动路由与 slash（本版未重跑；evidence/acceptance-2.1.1-desktop.* 出自 0.2.2 时期）",
+    "npm 发布（registry latest 仍为 2.1.0；2.1.1 / 2.1.2 / 2.1.3 均未发布）",
+    "0.3.0-alpha.x（会被装入但没有验证）"
+  ],
+  "registry": { "versions": ["0.0.0-stage", "2.0.2", "2.1.0"], "distTags": { "latest": "2.1.0" } }
+}
