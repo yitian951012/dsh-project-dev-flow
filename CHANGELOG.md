@@ -24,6 +24,7 @@
 13. **`verify.mjs` 计数器兼容 Node 24**：解析正则由 `^# <key> <n>` 扩为 `^(?:# |ℹ )<key> <n>`——DSH 0.2.3 自带 Node 24 的 reporter 输出 `ℹ tests`，旧正则使 `test` 步骤的计数**静默为空**，这正是 2.1.2 证据沿用 165 的根因。同时新增 `resolveDshVersion()`（优先 `DSH_FLOW_TARGET_DSH`，否则 `dsh --version`，都拿不到则 `null`），把运行时版本注入 validate 步骤环境，`--json` 载荷新增 `dshVersion`；解析不到时写入 `notVerified`，不静默放过。
 14. **`release-evidence.mjs` 输出 `engines.node`**：生成的发布证据此前只打印 `engines.dsh`，会静默漏掉 Node 地板；现补一行。
 15. **`engineSatisfies` 支持 `||` 并集与 `^x.y.z`（major ≥ 1）**，并修复 `compareSemver` 的三段补齐缺陷：原先 `25` 与 `25.0.0` 比较时会把 `undefined` 当数值（`<25` 会误放行 `25.x`）。`^0.x` 语义与 `^1+` 不同，仍按「宁可报红也不假绿」返回 false。新增单测钉住：`^24.22.3 || >=26.13.1` 接受 `24.22.3`/`26.13.1`、拒绝 `24.22.2`/`25.8.0`/`26.12.0`。
+16. **`release-evidence.mjs` 的 YAML 解析器探针改直读清单**：原先 `node -p "require('./node_modules/yaml/package.json')"` 在本包 `"type": "module"` 下解析失败，导致发布证据里「包内 YAML 解析器」永久显示「未验证」；现直接读文件，实测报 `2.9.1`。
 
 ### 验收状态（如实披露）
 

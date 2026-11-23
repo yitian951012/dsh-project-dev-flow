@@ -13,7 +13,7 @@
  * 默认输出到 evidence/release-<version>.json 与 .md
  */
 import { createHash } from 'node:crypto';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -36,13 +36,10 @@ function gitInfo() {
 }
 
 function parserVersion() {
+  // 直接读包内的清单：此前的 `node -p "require(...)"` 在 "type": "module" 下解析不了，会静默报「未验证」。
   try {
-    const json = JSON.parse(
-      spawnSync(process.execPath, ['-p', "require('./node_modules/yaml/package.json').version"], {
-        cwd: PLUGIN_ROOT, encoding: 'utf8',
-      }).stdout.trim() || 'null',
-    );
-    return typeof json === 'string' ? json : null;
+    const manifest = JSON.parse(readFileSync(path.join(PLUGIN_ROOT, 'node_modules', 'yaml', 'package.json'), 'utf8'));
+    return typeof manifest.version === 'string' ? manifest.version : null;
   } catch {
     return null;
   }
