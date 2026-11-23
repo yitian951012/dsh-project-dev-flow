@@ -16,9 +16,22 @@
  */
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const PLUGIN_ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
+
+/**
+ * 目标 DSH 运行时：优先 DSH_FLOW_TARGET_DSH，其次 `dsh --version`。
+ * 都拿不到就返回 null——validate 侧保持「未比对 engines.dsh」，不把降级当通过。
+ */
+function resolveDshVersion() {
+  const pinned = (process.env.DSH_FLOW_TARGET_DSH ?? '').trim();
+  if (pinned) return pinned;
+  const probe = spawnSync('dsh --version', { cwd: PLUGIN_ROOT, encoding: 'utf8', shell: true });
+  if (probe.status !== 0) return null;
+  const match = /\b(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?)\b/.exec(String(probe.stdout ?? ''));
+  return match ? match[1] : null;
+}
 
 const STEPS = [
   { id: 'validate', label: '结构 / 红线 / 链接 / 篇幅', cmd: [process.execPath, ['scripts/validate-package.mjs']] },
@@ -34,10 +47,11 @@ function npmCommand() {
   return 'npm';
 }
 
-function parseTestTotals(stdout) {
+/** 测试总数：TAP 用 `# tests 3`，Node 24 的 spec reporter 用 `ℹ tests 3`，两种都要认。 */
+export function parseTestTotals(stdout) {
   const totals = {};
   for (const key of ['tests', 'suites', 'pass', 'fail', 'cancelled', 'skipped', 'todo']) {
-    const match = new RegExp(`^# ${key} (\\d+)$`, 'm').exec(stdout);
+    const match = new RegExp(`^(?:# |ℹ )${key} (\\d+)$`, 'm').exec(stdout);
     if (match) totals[key] = Number(match[1]);
   }
   return Object.keys(totals).length > 0 ? totals : null;
@@ -54,14 +68,15 @@ function parsePackFiles(stdout) {
   }
 }
 
-function runStep(step) {
+function runStep(step, dshVersion = null) {
   const [command, args, useShell = false] = step.cmd;
   const started = Date.now();
   const result = spawnSync(command, args, {
     cwd: PLUGIN_ROOT,
     encoding: 'utf8',
     shell: useShell,
-    env: process.env,
+    // validate 侧只认 DSH_FLOW_TARGET_DSH（validate-package.mjs 没有 --dsh-version 参数）。
+    env: step.id === 'validate' && dshVersion ? { ...process.env, DSH_FLOW_TARGET_DSH: dshVersion } : process.env,
   });
   const durationMs = Date.now() - started;
   const stdout = result.stdout ?? '';
@@ -98,19 +113,26 @@ function runStep(step) {
 function main(argv) {
   const json = argv.includes('--json');
   const quiet = argv.includes('--quiet');
+  const dshVersion = resolveDshVersion();
 
-  const results = STEPS.map(runStep);
+  const results = STEPS.map((step) => runStep(step, dshVersion));
   const failed = results.filter((step) => !step.ok);
   const payload = {
     tool: 'dsh-project-dev-flow/verify',
     root: PLUGIN_ROOT,
     generatedAt: new Date().toISOString(),
     node: process.version,
+    dshVersion,
     ok: failed.length === 0,
     steps: results,
     failed: failed.map((step) => step.id),
     // 本管道只覆盖包内检查；装配与卸载回滚由 smoke:profile 单独覆盖。
-    notVerified: ['真实会话中的技能自动路由与 slash 调用', '工具 schema 与 token 实测', '真实模型的任务成功率'],
+    notVerified: [
+      '真实会话中的技能自动路由与 slash 调用',
+      '工具 schema 与 token 实测',
+      '真实模型的任务成功率',
+      ...(dshVersion ? [] : ['engines.dsh 与目标 DSH 运行时比对（未设置 DSH_FLOW_TARGET_DSH，且 dsh --version 不可用）']),
+    ],
   };
 
   if (json) {
@@ -131,9 +153,17 @@ function main(argv) {
     }
     process.stdout.write(`\n${failed.length === 0 ? '✔ 全部通过' : `✗ ${failed.length} 个步骤失败：${failed.map((s) => s.id).join('、')}`}\n`);
     process.stdout.write('ℹ 未验证（需真实宿主）：技能路由、slash 调用、工具 schema 与 token 实测\n');
+    process.stdout.write(
+      dshVersion
+        ? `ℹ 目标 DSH 运行时：${dshVersion}（validate 已比对 engines.dsh）\n`
+        : 'ℹ 目标 DSH 运行时：未设置（engines.dsh 未比对；设 DSH_FLOW_TARGET_DSH 或装上 dsh 后可校验）\n',
+    );
   }
 
   return failed.length === 0 ? 0 : 1;
 }
 
-process.exitCode = main(process.argv.slice(2));
+/* 仅直接执行时跑管道；被 import 时保持纯模块（tests 依赖 parseTestTotals）。 */
+if (process.argv[1] && pathToFileURL(path.resolve(process.argv[1])).href === import.meta.url) {
+  process.exitCode = main(process.argv.slice(2));
+}

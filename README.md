@@ -27,7 +27,7 @@
 ```text
 dsh-project-dev-flow/
 ├── cordis.patch.yml          # bundle patch：一个 preset + 工具面 + 包内技能目录
-├── package.json              # dsh.bundle.patch + engines.dsh（兼容区间）
+├── package.json              # dsh.bundle.patch + engines.dsh（兼容区间）+ engines.node（Node 地板）
 ├── icon.svg                  # 插件图标（Plugins 面板与详情页使用）
 ├── locale/                   # 面板显示文案（不进入会话上下文）
 │   ├── zh.json               # meta.title / meta.description / meta.detail
@@ -61,13 +61,13 @@ dsh-project-dev-flow/
 
 ## 3. 安装
 
-**前置条件**：DSH 版本区间 `>=0.2.2-rc.1 <0.3.0`（最低适配 `0.2.2-rc.1`，最高适配不含 `0.3.0`），Node `>=24.22.3`（对齐 DSH 0.2.3 的硬要求，已在清单用 `engines.node` 声明）。已校验运行时：`0.2.3-alpha.2`——最近一次在它上面完成结构校验、bundle patch 结构校验、包内测试与隔离 profile 装配烟测（证据见 `evidence/compat-2.1.2-*`）；`0.2.2-rc.5` 为历史验证点。换用区间内其它版本前，先在目标运行时走一遍 [MIGRATION.md](MIGRATION.md) 的验证清单。
+**前置条件**：DSH 版本区间 `>=0.2.2-rc.1 <0.3.0`（最低适配 `0.2.2-rc.1`，最高适配不含 `0.3.0` 正式版；`0.3.0` 正式版被拒，但 `0.3.0-alpha.x` 因 DSH 以 `includePrerelease` 判定仍会装入且未验证，别把它当已适配版本），Node `^24.22.3 || >=26.13.1`（2.1.2 起在清单里用 `engines.node` 声明，2.1.3 收紧；旧值 `>=24.22.3` 会放行 `25.x`，不作当前依据）。已校验运行时：`0.2.3-alpha.2`——`dsh --version` 输出该版本、退出码 0；最近一次在它上面完成结构校验、bundle patch 结构校验、包内测试与隔离 profile 装配烟测（证据见 `evidence/compat-2.1.2-*`）。`0.2.2-rc.5` 仅作历史验证点，且没有留下 `dsh --version` 记录，不能当作当前校验依据。换用区间内其它版本前，先在目标运行时走一遍 [MIGRATION.md](MIGRATION.md) 的验证清单。
 
 在 DSH 的 Plugins 面板中安装本目录（bundle 安装，选择本包所在目录）。
 安装后**新开一个会话**，在模式选择器中选择「项目开发流程」。
 已存在的会话保留启动时的 preset，不会热切换。
 
-升级：先移除旧包再安装新包。npm 包发布后也可直接安装：`dsh plugin --profile <profile> add @yitian951012/dsh-project-dev-flow`。
+升级：先移除旧包再安装新包。**npm 上目前是 `2.1.0`**（registry 的 `latest` 就是 `2.1.0`）：`2.1.1` / `2.1.2` / `2.1.3` 只在仓库里、尚未发布，所以 `dsh plugin --profile <profile> add @yitian951012/dsh-project-dev-flow` 现在装到的仍是 `2.1.0`；要这些修正，只能从仓库（克隆后按 bundle 方式安装本目录）。等它们真的发到 npm 之后，这条命令才等价于最新版。
 卸载：移除 bundle；包内技能与 preset 一并消失，项目自己的 `.dsh/skills`、`.agents/skills` 不受影响。
 面板中的标题、描述与详情页来自 `locale/`、`detail/`、`icon.svg`，不需要启用插件即可查看。
 
@@ -138,6 +138,7 @@ npm run acceptance -- --profile <name>   # 真实会话验收：技能自动路�
 `acceptance` 的前置条件是目标 profile 有一条**可用模型路由**（桌面端凭据不会自动注入 CLI）；脚本用 `--patch` 临时挂载本包技能目录，不改宿主 profile。返回码：0 通过、1 未命中、3 被凭据/适配器阻塞。
 
 发布前的最小证据链：`verify` 全绿 + `smoke:profile` 全绿 + 同一 commit 上生成 `evidence`。
+**发布通道现状**：仓库版本是 `2.1.3`，registry 的 `latest` 仍是 `2.1.0`；`2.1.1` 起的版本都没有发布到 npm，所以「仓库版本」与「npm 可安装版本」目前不一致——写兼容性或安装说明时必须标清是哪一侧。
 跨版本升级与回滚用 `node scripts/smoke-profile.mjs --upgrade-from <旧版本.tgz>`（先装旧包 → 装本包 → 回滚，核对版本号）。
 未跑真实会话时，只能写「包内验证与隔离装配通过，真实会话行为未验证」。
 

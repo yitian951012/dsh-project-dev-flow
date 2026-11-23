@@ -16,6 +16,8 @@ import assert from 'node:assert/strict';
 import { readFile, readdir } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { engineSatisfies } from '../scripts/validate-package.mjs';
+import { parseTestTotals } from '../scripts/verify.mjs';
 
 const PLUGIN_ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 
@@ -85,30 +87,43 @@ describe('profile：模板 / 字段表 / 机器可读示例同构', () => {
 });
 
 describe('运行时适配：DSH 0.2.3-alpha.2 口径（DEC-013）', () => {
-  it('engines.node 存在且地板与 DSH 0.2.3 一致（>=24.22.3）', async () => {
-    const pkg = JSON.parse(await read('package.json'));
-    const node = pkg.engines?.node;
+  async function engines() {
+    return JSON.parse(await read('package.json')).engines ?? {};
+  }
+
+  it('engines.node 按区间判定：接受 24.22.3 / 26.13.1，拒绝 24.22.2 / 26.12.0', async () => {
+    const node = (await engines()).node;
     assert.equal(typeof node, 'string', 'engines.node 缺失：DSH 0.2.3 要求 Node >=24.22.3，需在清单里声明');
-    const match = /^>=(\d+)\.(\d+)\.(\d+)/.exec(node.trim());
-    assert.ok(match, `engines.node 必须写成 >=x.y.z 形式，实际：${node}`);
-    assert.deepEqual(
-      [Number(match[1]), Number(match[2]), Number(match[3])],
-      [24, 22, 3],
-      `Node 地板应与 DSH 0.2.3-alpha.2 的硬要求一致（24.22.3），实际：${node}`,
-    );
+    assert.equal(engineSatisfies(node, '24.22.3'), true, `engines.node=${node} 未接受实测运行时 Node 24.22.3`);
+    assert.equal(engineSatisfies(node, '24.22.2'), false, `engines.node=${node} 错误地接受了低于地板的 24.22.2`);
+    assert.equal(engineSatisfies(node, '26.13.1'), true, `engines.node=${node} 未接受 DSH 0.2.3 放行的 Node 26.13.1`);
+    assert.equal(engineSatisfies(node, '26.12.0'), false, `engines.node=${node} 错误地接受了 26.13.1 以下的 26.12.0`);
   });
 
-  it('engines.dsh 保持兼容区间，不被顺手放宽或收紧', async () => {
-    const pkg = JSON.parse(await read('package.json'));
-    assert.equal(pkg.engines?.dsh, '>=0.2.2-rc.1 <0.3.0', '兼容区间改动须先登记决策，再由本测试同步');
+  it('engines.dsh 按区间判定：接受 0.2.3-alpha.2、拒绝 0.3.0，并承认 0.3.0-alpha.x 被放行', async () => {
+    const dsh = String((await engines()).dsh ?? '').trim().split(/\s+/).join(' ');
+    assert.equal(engineSatisfies(dsh, '0.2.3-alpha.2'), true, `engines.dsh=${dsh} 未覆盖已校验运行时 0.2.3-alpha.2`);
+    assert.equal(engineSatisfies(dsh, '0.3.0'), false, `engines.dsh=${dsh} 错误地覆盖了 0.3.0`);
+    // 已知边界：0.3.0-alpha.x 在 semver 上低于 0.3.0，落在 <0.3.0 内。把放行行为钉住，
+    // 避免有人把「拒绝 0.3.0」误读成「拒绝所有 0.3.x」。
+    assert.equal(engineSatisfies(dsh, '0.3.0-alpha.1'), true, 'engines.dsh 区间写法变了：0.3.0 预发布版不再被放行，需先登记决策再改本断言');
   });
 
-  it('三处兼容声明写明已校验运行时为 0.2.3-alpha.2', async () => {
+  it('三处兼容声明以「已校验运行时」口径写明 0.2.3-alpha.2，并保留 Node 地板 24.22.3', async () => {
     for (const rel of ['README.md', 'detail/DETAIL.md', 'MIGRATION.md']) {
       const text = await read(rel);
-      assert.match(text, /0\.2\.3-alpha\.2/, `${rel} 未写明已校验的 DSH 运行时版本`);
+      assert.match(text, /已校验运行时[^。\n]{0,24}0\.2\.3-alpha\.2/, `${rel} 未以「已校验运行时 … 0.2.3-alpha.2」口径写明已校验版本`);
+      assert.match(text, /24\.22\.3/, `${rel} 未写明 Node 地板 24.22.3`);
       assert.equal(/本包在 `0\.2\.2-rc\.5` 上完成校验/.test(text), false, `${rel} 仍称在 0.2.2-rc.5 上校验`);
     }
+  });
+});
+
+describe('verify 管道：测试总数兼容 TAP 与 Node 24 spec reporter', () => {
+  it('parseTestTotals 同时识别 `# tests 3` 与 `ℹ tests 3`', () => {
+    assert.deepEqual(parseTestTotals('# tests 3\n# pass 2\n# fail 1'), { tests: 3, pass: 2, fail: 1 });
+    assert.deepEqual(parseTestTotals('ℹ tests 3\nℹ pass 2\nℹ fail 1'), { tests: 3, pass: 2, fail: 1 });
+    assert.equal(parseTestTotals('no totals here'), null);
   });
 });
 

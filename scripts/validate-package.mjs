@@ -478,6 +478,8 @@ function compareSemver(a, b) {
   const split = (v) => {
     const [core, pre = ''] = String(v).trim().split('-');
     const nums = core.split('.').map((n) => Number.parseInt(n, 10) || 0);
+    // 补齐到三段：否则 `25` 与 `25.0.0` 会把 undefined 当比较对象，`<25` 会误放行 25.x。
+    while (nums.length < 3) nums.push(0);
     return { nums, pre: pre ? pre.split('.') : [] };
   };
   const x = split(a);
@@ -507,15 +509,23 @@ function compareSemver(a, b) {
   return 0;
 }
 
-/** 极简 engines 判定：支持精确版本、>=x 与 >=x <y；其它写法按不满足处理（宁可报红也不假绿）。 */
+/** 极简 engines 判定：支持精确版本、>=x、>=x <y、^x.y.z（major>=1）与 `||` 并集；其它写法按不满足处理（宁可报红也不假绿）。 */
 export function engineSatisfies(declared, target) {
   const d = String(declared).trim();
   const t = String(target).trim();
   if (!d || !t) return false;
+  if (d.includes('||')) return d.split('||').some((part) => engineSatisfies(part, t));
   if (d === t) return true;
   const parts = d.split(/\s+/);
   if (parts.length === 2 && parts[0].startsWith('>=') && parts[1].startsWith('<')) {
     return compareSemver(t, parts[0].slice(2)) >= 0 && compareSemver(t, parts[1].slice(1)) < 0;
+  }
+  if (parts.length === 1 && parts[0].startsWith('^')) {
+    const floor = parts[0].slice(1);
+    const major = Number.parseInt(floor.split('.')[0], 10);
+    // ^0.x 的通配语义与 ^1+ 不同，不支持就报红，不猜。
+    if (!(major >= 1)) return false;
+    return compareSemver(t, floor) >= 0 && compareSemver(t, `${major + 1}.0.0`) < 0;
   }
   if (parts.length === 1 && parts[0].startsWith('>=')) return compareSemver(t, parts[0].slice(2)) >= 0;
   return false;

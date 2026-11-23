@@ -1186,6 +1186,21 @@ describe('负例：引擎版本与来源去向类型', () => {
     assert.equal(engineSatisfies('>=0.3.0', '0.2.2-rc.3'), false);
   });
 
+  it('engineSatisfies 支持 ^x.y.z 与 || 并集（Node 地板口径）', async () => {
+    const { engineSatisfies } = await import('../scripts/validate-package.mjs');
+    const nodeFloor = '^24.22.3 || >=26.13.1';
+    assert.equal(engineSatisfies(nodeFloor, '24.22.3'), true, '24.22.3 是 DSH 0.2.3 的 24.x 地板');
+    assert.equal(engineSatisfies(nodeFloor, '24.22.2'), false, '低于地板必须红');
+    assert.equal(engineSatisfies(nodeFloor, '25.8.0'), false, '25.x 不在 DSH 0.2.3 支持范围（宽松 >=24.22.3 的漏洞）');
+    assert.equal(engineSatisfies(nodeFloor, '26.13.1'), true, '26.13.1 是 26.x 分支地板');
+    assert.equal(engineSatisfies(nodeFloor, '26.12.0'), false, '26.13.1 之前不接受');
+    assert.equal(engineSatisfies('^1.2.3', '1.9.9'), true);
+    assert.equal(engineSatisfies('^1.2.3', '2.0.0'), false, '^1.x 不得跨大版本');
+    assert.equal(engineSatisfies('^0.2.3', '0.2.3'), false, '^0.x 语义不支持，按「宁可报红」返回 false');
+    assert.equal(engineSatisfies('>=24.22.3 <25 || >=26.13.1', '24.22.3'), true);
+    assert.equal(engineSatisfies('>=24.22.3 <25 || >=26.13.1', '25.0.0'), false);
+  });
+
   it('disposition=method 但 targets 指向 skills/ → SOURCE-LOCK-SCHEMA（去向与类型不一致）', () => {
     const lock = {
       schemaVersion: 1,

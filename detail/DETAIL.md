@@ -8,12 +8,12 @@
 
 ## 安装
 
-**前置条件**：DSH 版本区间 `>=0.2.2-rc.1 <0.3.0`，Node `>=24.22.3`。已校验运行时 `0.2.3-alpha.2`（结构校验、patch 结构校验、包内测试与隔离 profile 装配烟测；`0.2.2-rc.5` 为历史验证点）；区间内换版本前，先在目标运行时重新验证，见包根 `MIGRATION.md`。
+**前置条件**：DSH 版本区间 `>=0.2.2-rc.1 <0.3.0`——`0.3.0` 正式版被拒，但 `0.3.0-alpha.x` 因 DSH 以 `includePrerelease` 判定仍会装入且未验证；Node `^24.22.3 || >=26.13.1`（2.1.2 起声明，2.1.3 收紧）。已校验运行时 `0.2.3-alpha.2`（`dsh --version` 输出该版本、退出码 0；结构校验、patch 结构校验、包内测试与隔离 profile 装配烟测）；`0.2.2-rc.5` 仅作历史验证点，且没有 `dsh --version` 记录可查。区间内换版本前，先在目标运行时重新验证，见包根 `MIGRATION.md`。
 
-安装方式：
+安装方式（注意通道差异）：
 
-- npm 包：`dsh plugin --profile <profile> add @yitian951012/dsh-project-dev-flow`
-- GitHub 源：`dsh plugin --profile <profile> add github:yitian951012/dsh-project-dev-flow`
+- npm 包：`dsh plugin --profile <profile> add @yitian951012/dsh-project-dev-flow`——**只能装到 `2.1.0`**：registry 的 `latest` 仍是 `2.1.0`，`2.1.1` / `2.1.2` / `2.1.3` 尚未发布。
+- GitHub 源：`dsh plugin --profile <profile> add github:yitian951012/dsh-project-dev-flow`——取仓库当前版本（含未发布修正）；该通道的写法本身未在 2.1.3 上重跑验证。
 
 1. 在 DSH 的 Plugins 面板中以 bundle 安装方式选择本包目录。
 2. 安装后新开一个会话——已有会话保留启动时的模式，不会热切换。
@@ -22,11 +22,11 @@
 
 升级：先移除旧包，再安装新包。卸载：移除 bundle，包内技能与模式一并消失；项目自己的 `.dsh/skills`、`.agents/skills` 不受影响。
 
-## 读取与工具面（2.1.0）
+## 读取与工具面（2.1.0–2.1.3）
 
 - **方法按节读**：技能读方法只取 §2 核心判断与 §3 步骤，靠一条可执行命令，而不是一句提示——在包目录执行 `node scripts/section.mjs <方法名> 2 3`；裸方法名按包内 `methods/` 解析。
 - **与流程无关的工具不声明**：定时任务在 preset 内显式关闭（已用隔离 profile 实测生效）；工作流编排与子代理 fork 三簇由宿主预设的默认工具集提供，本包不声明也无法在 preset 内关闭（实测：从本包删除后仍会出现，写 `disabled: true` 也会被丢弃）；要关闭只能在宿主 profile 层处理。
-- **真实会话验收**：`node scripts/acceptance-session.mjs --profile <name>` 用 `--patch` 临时挂载技能并跑三条任务（自动路由 ×2 + slash ×1），结果写入 `evidence/acceptance-<版本>.json|md`；返回 3 表示 profile 缺少可用模型路由。
+- **真实会话验收**：`node scripts/acceptance-session.mjs --profile <name>` 用 `--patch` 临时挂载技能并跑三条任务（自动路由 ×2 + slash ×1），结果写入 `evidence/acceptance-<版本>.json|md`；返回 3 表示 profile 缺少可用模型路由。在 `0.2.3-alpha.2` 上这项**未重跑**：`evidence/acceptance-2.1.1-*` 出自 `0.2.2` 时期，不能据此宣称路由在 `0.2.3-alpha.2` 上通过。
 
 ## 五个技能入口
 

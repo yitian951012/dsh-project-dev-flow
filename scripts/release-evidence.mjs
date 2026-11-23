@@ -113,6 +113,7 @@ function renderMarkdown(evidence) {
   lines.push(`| 包名 | \`${evidence.package}\` |`);
   lines.push(`| 版本 | \`${evidence.version}\` |`);
   lines.push(`| engines.dsh | \`${evidence.engines.dsh}\` |`);
+  lines.push(`| engines.node | \`${evidence.engines.node ?? '未验证'}\` |`);
   lines.push(`| commit | \`${evidence.git.commit ?? '未验证'}\` |`);
   lines.push(`| 工作区干净 | ${evidence.git.clean === null ? '未验证' : evidence.git.clean ? '是' : '否'} |`);
   lines.push(`| Node | \`${evidence.runtime.node}\` |`);

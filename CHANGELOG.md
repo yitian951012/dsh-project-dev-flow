@@ -1,16 +1,49 @@
 # CHANGELOG
 
+## 2.1.3 — 2026-11-23
+
+**修正发布：15 项（12 项文档与声明口径 + 3 项门禁/校验器）。不改 preset id、5 个技能与六阶段判定口径，不新增能力，不移动 `v2.1.2` tag。npm 仍未发布本版（registry 最新版是 `2.1.0`）。**
+
+### 修正（12 项文档与声明口径）
+
+1. **`engines.node` 收紧为 `^24.22.3 || >=26.13.1`**：2.1.2 的 `>=24.22.3` 会放行 `25.x` 这类未适配运行时；新值的语义是 `^24.22.3`（`24.22.3`–`24.x`）或 `>=26.13.1`（`26.13.1` 及以上，不设上界）。对齐 DSH `0.2.3-alpha.2` 的 Node 硬要求（`docs/upgrade-guide/v0.2.3-alpha.1/node-24-22-3`）。用 npm 自带 semver 复核：`24.22.3` true、`25.8.0` false、`26.13.1` true、`26.0.0` false。
+2. **`engines.node` 的引入版本改正**：该字段首次出现在 **2.1.2**，不是 2.0。`MIGRATION.md` 的 1.x→2.0 对照表里原本把它写成 2.0 的产出，现移出该表，改为表下注记「2.1.2 起」。
+3. **`0.3.0` 边界写准**（README / DETAIL / MIGRATION / 本文件）：`0.3.0` 正式版被拒，但 `0.3.0-alpha.x` 因 DSH 以 `includePrerelease` 判定仍会装入且未验证。同一区间 `>=0.2.2-rc.1 <0.3.0` 的 semver 复核：`0.2.3-alpha.2` 默认 false / `includePrerelease` **true**；`0.3.0-alpha.1` 默认 false / `includePrerelease` **true**；`0.3.0` 两种判定都 false。
+4. **Cordis 版本改正**：`0.2.3-alpha.2` 实际装配 `@deepseek-ai/cordis@4.2.0-alpha.1`（`resources/app.asar` 内 assembly 清单的 `sharedPackages`）；`4.0.0-rc.12` 属 `0.2.3-alpha.1` 时期。2.1.2 条目原写作 `4.0.0-rc.12`，是错的。
+5. **「已校验运行时」口径**：`0.2.2-rc.5` 只保留为历史验证点，并注明**没有 `dsh --version` 记录**可查；现行校验点 `0.2.3-alpha.2` 有 `dsh --version` → 输出 `0.2.3-alpha.2`、exit 0 的记录。
+6. **npm 通道限定**（README / DETAIL）：npm 上目前是 `2.1.0`，`2.1.1` / `2.1.2` / `2.1.3` 只在仓库、尚未发布；`dsh plugin … add @yitian951012/dsh-project-dev-flow` 这条命令现在装到的仍是 `2.1.0`。
+7. **测试与打包计数一律带树标签**：不再出现无树名的计数。2.1.3 源树（工作树，`node --test` 与 `npm pack --dry-run` 实测，命令见下「验收状态」）为 `tests 170` / `suites 38`、`test:source 2`、pack 72 files（在 2.1.3 证据入库之前）；2.1.3 初始树为 `tests 168` / `suites 37`，随后契约测试与校验器单测共补入 2 条。
+8. **DETAIL 标题版本区间**：「读取与工具面（2.1.0）」改为「读取与工具面（2.1.0–2.1.3）」，不再读成只覆盖 2.1.0。
+9. **`隔离开户` → 隔离 profile**：2.1.2 条目里的错字改正（其余 `隔离 profile` 用法一致）。
+10. **MIGRATION 新增「关于 2.1.3」**小节：修正项、tag 不动、`engines.node` 收紧、npm 未发布。
+11. **README / DETAIL 的 Node 声明与 `engines.node` 同步**：当前值都写成 `^24.22.3 || >=26.13.1`；历史值 `>=24.22.3` 只在标注「2.1.2 旧值」时出现。
+12. **2.1.2 条目与口径同步**：该条目的 `165` / `70 files` 保留但标注所属树（2.1.2 树，提交 `12e92c8`；pack 数在该版证据入库前），并同步 Cordis 与 Node 的改正结论。
+
+### 修正（3 项门禁 / 校验器）
+
+13. **`verify.mjs` 计数器兼容 Node 24**：解析正则由 `^# <key> <n>` 扩为 `^(?:# |ℹ )<key> <n>`——DSH 0.2.3 自带 Node 24 的 reporter 输出 `ℹ tests`，旧正则使 `test` 步骤的计数**静默为空**，这正是 2.1.2 证据沿用 165 的根因。同时新增 `resolveDshVersion()`（优先 `DSH_FLOW_TARGET_DSH`，否则 `dsh --version`，都拿不到则 `null`），把运行时版本注入 validate 步骤环境，`--json` 载荷新增 `dshVersion`；解析不到时写入 `notVerified`，不静默放过。
+14. **`release-evidence.mjs` 输出 `engines.node`**：生成的发布证据此前只打印 `engines.dsh`，会静默漏掉 Node 地板；现补一行。
+15. **`engineSatisfies` 支持 `||` 并集与 `^x.y.z`（major ≥ 1）**，并修复 `compareSemver` 的三段补齐缺陷：原先 `25` 与 `25.0.0` 比较时会把 `undefined` 当数值（`<25` 会误放行 `25.x`）。`^0.x` 语义与 `^1+` 不同，仍按「宁可报红也不假绿」返回 false。新增单测钉住：`^24.22.3 || >=26.13.1` 接受 `24.22.3`/`26.13.1`、拒绝 `24.22.2`/`25.8.0`/`26.12.0`。
+
+### 验收状态（如实披露）
+
+- 文本与计数复核：`node --test tests/validate-package.test.mjs tests/check-patch-yaml.test.mjs tests/section.test.mjs tests/contract-consistency.test.mjs` → `tests 170` / `suites 38`、exit 0；`node --test tests/source-integration.test.mjs` → `tests 2`、exit 0；`npm pack --dry-run --json --ignore-scripts` → 72 files、exit 0。
+- 门禁全链：`node scripts/verify.mjs` → exit 0（validate / sources / lock / patch / test / test:source / pack 七步全绿），尾部打印「目标 DSH 运行时：0.2.3-alpha.2（validate 已比对 engines.dsh）」。
+- 运行时记录：`dsh --version` → `0.2.3-alpha.2`、exit 0；`node -v` → `v24.22.3`。
+- registry：`npm view @yitian951012/dsh-project-dev-flow versions dist-tags --json` → versions `["0.0.0-stage","2.0.2","2.1.0"]`、`latest: 2.1.0`。
+- 真实会话的技能自动路由与 slash 在 `0.2.3-alpha.2` 上：**未重跑**（`evidence/acceptance-2.1.1-*` 出自 0.2.2 时期），本版不据此宣称路由通过。
+
 ## 2.1.2 — 2026-11-23
 
-**运行时适配版：只对齐 DSH `0.2.3-alpha.2` 的版本声明与证据，不新增能力、不改 preset id、5 个技能与六阶段判定口径（DEC-013）。**
+**运行时适配版：只对齐 DSH `0.2.3-alpha.2` 的版本声明与证据，不新增能力、不改 preset id、5 个技能与六阶段判定口径（DEC-013）。本版未发布到 npm：registry 最新版仍是 `2.1.0`。**
 
 ### 适配
 
-- **运行时实测**：在 `dsh 0.2.3-alpha.2`（Node 地板 `24.22.3`）上完成隔离 profile 装配烟测（安装 / `--dump-config` / preset 装配 / 卸载回滚，12 项断言全过）与包内门禁（validate / sources / lock / patch / 测试 165 / 作者侧 2 / 打包面 70）。
-- **`engines.dsh` 保持不变**：`>=0.2.2-rc.1 <0.3.0`。DSH 的版本门禁用 `semver.satisfies(runtime, range, { includePrerelease: true })` 判定，因此 `0.2.3-alpha.1` / `0.2.3-alpha.2` 已被覆盖，`0.3.0` 仍被拒绝。新增契约测试钉住该区间，防止被顺手放宽或收紧。
-- **新增 `engines.node >=24.22.3`**：对齐 DSH 0.2.3 的硬要求（24.x 系列 `24.22.3+` 或 `26.13.1+`；`dsh-v0.2.3-alpha.2` 的唯一变更就是这条 Node 地板）。
-- **兼容声明更新**：README / DETAIL / MIGRATION 的「已校验运行时」由 `0.2.2-rc.5` 改为 `0.2.3-alpha.2`，并写清 Node 前置条件；`0.2.2-rc.5` 保留为历史验证点。
-- **DSH 0.2.3 变更面复核**：Cordis 同步到 `4.0.0-rc.12`（YAML 解析与配置校验变化）下，本包 `cordis.patch.yml` 的 `insert` 与 `!!js` 表达式仍被保留（隔离开户 `--dump-config` 可见 `customSkillDirs`）；工具失败结果统一携带结构化错误码后，`final.reason.error.code` 仍为 `MISSING_CREDENTIAL`，验收脚本的事件解析不受影响；`working_directory` 等被移除的工具本包未声明。
+- **运行时实测**：在 `dsh 0.2.3-alpha.2`（Node 地板 `24.22.3`）上完成隔离 profile 装配烟测（安装 / `--dump-config` / preset 装配 / 卸载回滚，12 项断言全过）与包内门禁（validate / sources / lock / patch / 测试 / 作者侧测试 / 打包面；计数按树计入——2.1.2 树（提交 `12e92c8`）：`tests 165`、`test:source 2`、pack 70 files（2.1.2 证据入库前））。
+- **`engines.dsh` 保持不变**：`>=0.2.2-rc.1 <0.3.0`。DSH 的版本门禁用 `semver.satisfies(runtime, range, { includePrerelease: true })` 判定，因此 `0.2.3-alpha.1` / `0.2.3-alpha.2` 已被覆盖，`0.3.0` 正式版仍被拒绝；但同一判定也放行 `0.3.0-alpha.x`——它们会装入且未验证（2.1.3 起在 README / DETAIL / MIGRATION 统一写明）。新增契约测试钉住该区间，防止被顺手放宽或收紧。
+- **新增 `engines.node >=24.22.3`**：对齐 DSH 0.2.3 的硬要求（`dsh-v0.2.3-alpha.2` 的唯一变更就是这条 Node 地板，`docs/upgrade-guide/v0.2.3-alpha.1/node-24-22-3`）。这个值本身不够精确：`>=24.22.3` 会放行 `25.x` 等未适配运行时，2.1.3 已收紧为 `^24.22.3 || >=26.13.1`（`24.x` 用 `24.22.3+`，`26.13.1` 及以上）。
+- **兼容声明更新**：README / DETAIL / MIGRATION 的「已校验运行时」由 `0.2.2-rc.5` 改为 `0.2.3-alpha.2`，并写清 Node 前置条件；`0.2.2-rc.5` 保留为历史验证点，但该点没有留下 `dsh --version` 记录，不能当作当前校验依据（2.1.3 起明确标注）。
+- **DSH 0.2.3 变更面复核**：Cordis 实际装配 `@deepseek-ai/cordis@4.2.0-alpha.1`（本条原写作 `4.0.0-rc.12`，那是 `0.2.3-alpha.1` 时期的版本，2.1.3 已改正；YAML 解析与配置校验随之变化）下，本包 `cordis.patch.yml` 的 `insert` 与 `!!js` 表达式仍被保留（隔离 profile `--dump-config` 可见 `customSkillDirs`）；工具失败结果统一携带结构化错误码后，`final.reason.error.code` 仍为 `MISSING_CREDENTIAL`，验收脚本的事件解析不受影响；`working_directory` 等被移除的工具本包未声明。
 
 ### 未变
 
@@ -19,12 +52,12 @@
 ### 验收状态（如实披露）
 
 - 隔离 profile 装配烟测：**已实测通过**（`node scripts/smoke-profile.mjs` exit 0）。
-- 包内门禁：**已实测通过**（`node scripts/verify.mjs` exit 0，`tests=165 pass=165`、`test:source` 2/2、pack 70 files）。
+- 包内门禁：**已实测通过**（`node scripts/verify.mjs` exit 0；2.1.2 树（提交 `12e92c8`）：`tests=165 pass=165`、`test:source` 2/2、pack 70 files（2.1.2 证据入库前））。
 - 真实会话中的技能自动路由与 slash 调用在 `0.2.3-alpha.2` 上：**未重跑**（`evidence/acceptance-2.1.1-desktop.*` 出自 0.2.2 时期）；本会话仅证明 preset 装配与技能加载可用，不据此宣称路由通过。
 
 ## 2.1.1 — 2026-11-20
 
-**正确性与证据闭环修正：不新增内容能力，不改 preset id、5 个技能与六阶段判定口径。把上一轮「静态全绿但语义仍漂移」的缺口逐条钉死。**
+**正确性与证据闭环修正：不新增内容能力，不改 preset id、5 个技能与六阶段判定口径。把上一轮「静态全绿但语义仍漂移」的缺口逐条钉死。本版未发布到 npm：registry 最新版仍是 `2.1.0`。**
 
 ### 修正
 
@@ -117,12 +150,12 @@
 
 - 包名由 `@local/dsh-project-dev-flow` 改为公开 scope `@yitian951012/dsh-project-dev-flow`，`private: false`，`publishConfig.access: public`。
 - 补 `repository` / `homepage` / `bugs` 指向 GitHub 仓库；keywords 增加 `dsh-plugin`。
-- `engines.dsh` 由精确版本 `0.2.2-rc.3` 改为兼容区间 `>=0.2.2-rc.1 <0.3.0`：最低适配 `0.2.2-rc.1`，最高适配不含 `0.3.0`。
+- `engines.dsh` 由精确版本 `0.2.2-rc.3` 改为兼容区间 `>=0.2.2-rc.1 <0.3.0`：最低适配 `0.2.2-rc.1`，最高适配不含 `0.3.0` 正式版。
 
 ### 兼容说明
 
 - 区间表示「不因版本号被直接拒绝」，不等于区间内每个版本都实测过；区间内换版本仍需执行 MIGRATION 的验证清单。
-- 低于 `0.2.2-rc.1` 或达到 `0.3.0` 及以上会被版本约束拒绝。
+- 低于 `0.2.2-rc.1` 或达到 `0.3.0` 及以上会被版本约束拒绝（`0.3.0-alpha.x` 是例外：DSH 的 `includePrerelease` 判定会让它们装入且未验证，2.1.3 起写明）。
 - preset id `project-dev-flow`、包内技能、调用方式均未变化；已安装的 2.0.1 用户不受影响。
 
 ## 2.0.1 — 2026-11-13
