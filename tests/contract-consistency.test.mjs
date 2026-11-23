@@ -84,6 +84,34 @@ describe('profile：模板 / 字段表 / 机器可读示例同构', () => {
   });
 });
 
+describe('运行时适配：DSH 0.2.3-alpha.2 口径（DEC-013）', () => {
+  it('engines.node 存在且地板与 DSH 0.2.3 一致（>=24.22.3）', async () => {
+    const pkg = JSON.parse(await read('package.json'));
+    const node = pkg.engines?.node;
+    assert.equal(typeof node, 'string', 'engines.node 缺失：DSH 0.2.3 要求 Node >=24.22.3，需在清单里声明');
+    const match = /^>=(\d+)\.(\d+)\.(\d+)/.exec(node.trim());
+    assert.ok(match, `engines.node 必须写成 >=x.y.z 形式，实际：${node}`);
+    assert.deepEqual(
+      [Number(match[1]), Number(match[2]), Number(match[3])],
+      [24, 22, 3],
+      `Node 地板应与 DSH 0.2.3-alpha.2 的硬要求一致（24.22.3），实际：${node}`,
+    );
+  });
+
+  it('engines.dsh 保持兼容区间，不被顺手放宽或收紧', async () => {
+    const pkg = JSON.parse(await read('package.json'));
+    assert.equal(pkg.engines?.dsh, '>=0.2.2-rc.1 <0.3.0', '兼容区间改动须先登记决策，再由本测试同步');
+  });
+
+  it('三处兼容声明写明已校验运行时为 0.2.3-alpha.2', async () => {
+    for (const rel of ['README.md', 'detail/DETAIL.md', 'MIGRATION.md']) {
+      const text = await read(rel);
+      assert.match(text, /0\.2\.3-alpha\.2/, `${rel} 未写明已校验的 DSH 运行时版本`);
+      assert.equal(/本包在 `0\.2\.2-rc\.5` 上完成校验/.test(text), false, `${rel} 仍称在 0.2.2-rc.5 上校验`);
+    }
+  });
+});
+
 describe('发布口径：AUTHORING 不再自称不对外发布', () => {
   it('说明它是随包提供的作者规范', async () => {
     const text = await read('AUTHORING.md');

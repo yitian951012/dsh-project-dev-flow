@@ -1,5 +1,27 @@
 # CHANGELOG
 
+## 2.1.2 — 2026-11-23
+
+**运行时适配版：只对齐 DSH `0.2.3-alpha.2` 的版本声明与证据，不新增能力、不改 preset id、5 个技能与六阶段判定口径（DEC-013）。**
+
+### 适配
+
+- **运行时实测**：在 `dsh 0.2.3-alpha.2`（Node 地板 `24.22.3`）上完成隔离 profile 装配烟测（安装 / `--dump-config` / preset 装配 / 卸载回滚，12 项断言全过）与包内门禁（validate / sources / lock / patch / 测试 165 / 作者侧 2 / 打包面 70）。
+- **`engines.dsh` 保持不变**：`>=0.2.2-rc.1 <0.3.0`。DSH 的版本门禁用 `semver.satisfies(runtime, range, { includePrerelease: true })` 判定，因此 `0.2.3-alpha.1` / `0.2.3-alpha.2` 已被覆盖，`0.3.0` 仍被拒绝。新增契约测试钉住该区间，防止被顺手放宽或收紧。
+- **新增 `engines.node >=24.22.3`**：对齐 DSH 0.2.3 的硬要求（24.x 系列 `24.22.3+` 或 `26.13.1+`；`dsh-v0.2.3-alpha.2` 的唯一变更就是这条 Node 地板）。
+- **兼容声明更新**：README / DETAIL / MIGRATION 的「已校验运行时」由 `0.2.2-rc.5` 改为 `0.2.3-alpha.2`，并写清 Node 前置条件；`0.2.2-rc.5` 保留为历史验证点。
+- **DSH 0.2.3 变更面复核**：Cordis 同步到 `4.0.0-rc.12`（YAML 解析与配置校验变化）下，本包 `cordis.patch.yml` 的 `insert` 与 `!!js` 表达式仍被保留（隔离开户 `--dump-config` 可见 `customSkillDirs`）；工具失败结果统一携带结构化错误码后，`final.reason.error.code` 仍为 `MISSING_CREDENTIAL`，验收脚本的事件解析不受影响；`working_directory` 等被移除的工具本包未声明。
+
+### 未变
+
+- preset id `project-dev-flow`、5 个技能、3 自动 / 2 显式分工、六阶段判定口径、方法 / 模板 / 案例均不变；除 `engines.node` 外无新声明。
+
+### 验收状态（如实披露）
+
+- 隔离 profile 装配烟测：**已实测通过**（`node scripts/smoke-profile.mjs` exit 0）。
+- 包内门禁：**已实测通过**（`node scripts/verify.mjs` exit 0，`tests=165 pass=165`、`test:source` 2/2、pack 70 files）。
+- 真实会话中的技能自动路由与 slash 调用在 `0.2.3-alpha.2` 上：**未重跑**（`evidence/acceptance-2.1.1-desktop.*` 出自 0.2.2 时期）；本会话仅证明 preset 装配与技能加载可用，不据此宣称路由通过。
+
 ## 2.1.1 — 2026-11-20
 
 **正确性与证据闭环修正：不新增内容能力，不改 preset id、5 个技能与六阶段判定口径。把上一轮「静态全绿但语义仍漂移」的缺口逐条钉死。**
