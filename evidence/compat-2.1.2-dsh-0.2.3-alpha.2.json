@@ -1,0 +1,87 @@
+{
+  "generatedAt": "2026-11-23T11:20:00.000Z",
+  "package": "@yitian951012/dsh-project-dev-flow",
+  "version": "2.1.2",
+  "subject": "DSH 0.2.3-alpha.2 运行时适配",
+  "decision": "DEC-013（项目决策登记 docs/02_入口_决策登记.md）",
+  "commit": "12e92c8",
+  "runtime": {
+    "dsh": "0.2.3-alpha.2",
+    "node": "24.22.3",
+    "pnpm": "11.28.5",
+    "note": "dsh --version 输出 0.2.3-alpha.2；运行时自带 Node 24.22.3（resources/runtime/versions.json）"
+  },
+  "engines": {
+    "dsh": ">=0.2.2-rc.1 <0.3.0",
+    "node": ">=24.22.3"
+  },
+  "versionGate": {
+    "implementation": "packages/boot/app-boot/src/plugin-compatibility.ts —— semver.satisfies(runtimeVersion, range, { includePrerelease: true })",
+    "verdicts": {
+      "0.2.3-alpha.1": true,
+      "0.2.3-alpha.2": true,
+      "0.3.0": false
+    },
+    "note": "默认 semver 语义会把 0.2.3-alpha.2 判为 false；DSH 用 includePrerelease，故区间已覆盖该预发布版本，无需改 engines.dsh"
+  },
+  "checks": [
+    {
+      "id": "dsh-version",
+      "command": "dsh --version",
+      "exit": 0,
+      "observed": "0.2.3-alpha.2"
+    },
+    {
+      "id": "smoke-profile",
+      "command": "node scripts/smoke-profile.mjs",
+      "exit": 0,
+      "observed": "安装 bundle / profile 记录依赖 / dump-config / preset 装配 / 模式名可见 / tool-schedule 保留 disabled / 三簇未声明 / 卸载后 preset 消失，12 项断言全过"
+    },
+    {
+      "id": "verify",
+      "command": "node scripts/verify.mjs",
+      "exit": 0,
+      "observed": "validate / sources / lock / patch / test(165 pass) / test:source(2 pass) / pack(70 files) 七步全绿"
+    },
+    {
+      "id": "probe-install-dump",
+      "command": "dsh plugin --profile probe add <本包目录>; dsh --profile probe --dump-config",
+      "exit": 0,
+      "observed": "安装输出 + @yitian951012/dsh-project-dev-flow 2.1.2；dump 中 customSkillDirs 的 !!js 表达式原样保留（Cordis 4.0.0-rc.12 下未被丢弃）"
+    },
+    {
+      "id": "cli-event-contract",
+      "command": "dsh --profile headless --json \"只回复两个字：可以\"",
+      "exit": 1,
+      "observed": "final.reason.error.code = MISSING_CREDENTIAL，事件结构 session/status/final 未变；exit 1 为 CLI 无凭据，符合预期"
+    },
+    {
+      "id": "section-reader",
+      "command": "node scripts/section.mjs truth-and-lifecycle 2 3",
+      "exit": 0,
+      "observed": "正常输出方法 §2/§3"
+    },
+    {
+      "id": "contract-tests-red-then-green",
+      "command": "node --test tests/contract-consistency.test.mjs",
+      "exit": 1,
+      "observed": "实现前 2 条断言失败（engines.node 缺失、三处兼容声明仍写 0.2.2-rc.5）；实现后 exit 0"
+    }
+  ],
+  "preEvidencePack": {
+    "note": "本证据文件入库前测得的打包指纹（70 files）；入库后 tarball 变为 72 files，故发布包以 registry 的 dist.shasum 为准",
+    "files": 70,
+    "size": 183583,
+    "unpackedSize": 568102,
+    "shasum": "cfa08a05c3f500732877a49eab14c02184f890f9"
+  },
+  "notVerified": [
+    "0.2.3-alpha.2 上的真实会话技能自动路由与 slash（未重跑；evidence/acceptance-2.1.1-desktop.* 出自 0.2.2 时期）",
+    "0.3.0 及以上版本",
+    "区间内其它版本的逐个实测（按 MIGRATION 的验证清单逐版本走）"
+  ],
+  "knownBoundaries": [
+    "engines.dsh 由 DSH 以 includePrerelease 判定，故 0.3.0-alpha.x 也会落在当前上界之内；本次未收紧（DEC-013 明确保持区间）",
+    "engines.node >=24.22.3 会让 Node 22 环境执行 npm install 时收到 EBADENGINE 警告；DSH 运行时自带 Node 24.22.3"
+  ]
+}
