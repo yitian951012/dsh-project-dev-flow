@@ -1,0 +1,182 @@
+{
+  "generatedAt": "2026-11-23T13:59:34.524Z",
+  "package": "@yitian951012/dsh-project-dev-flow",
+  "version": "2.1.2",
+  "engines": {
+    "dsh": ">=0.2.2-rc.1 <0.3.0",
+    "node": ">=24.22.3"
+  },
+  "runtime": {
+    "node": "v24.22.3",
+    "npm": "11.19.1",
+    "yaml": null
+  },
+  "git": {
+    "commit": "6b5dd3c12845f4963120b683e463303846ef77b4",
+    "clean": true,
+    "note": null
+  },
+  "hashes": {
+    "package.json": "c78d71843e56c6204c6573fc4a7da6b9427bffa8fb2a659a36ff678b32a16e80",
+    "package-lock.json": "37e8353a427d16c3346808410a22b73df4346f8becad1556d4dc13635357fb5b",
+    "cordis.patch.yml": "78e6e11a0e25fb874d3e86707ebb39d8cc13701bcee5e7e206275d1d3be8e665",
+    "sources.lock.json": "dd7318a4bf4a8d0f48c6a9ded037072eda7f56cb8d324e6cbfd1366c5ecfcb26"
+  },
+  "verify": {
+    "ok": false,
+    "exitCode": 1,
+    "steps": [
+      {
+        "id": "validate",
+        "label": "结构 / 红线 / 链接 / 篇幅",
+        "command": "node.exe scripts/validate-package.mjs",
+        "exitCode": 1,
+        "ok": false,
+        "durationMs": 106,
+        "metrics": {},
+        "stdoutTail": [
+          "   Fix: 源文档已变更：重新评审提炼内容，确认后运行 node scripts/gen-sources-lock.mjs（禁止静默改哈希）",
+          "",
+          "资产 33 个（case 3 / method 5 / adapter 1 / skill 5 / reference 10 / template 9） · docs 39 份 · lock 39 条",
+          "✗ 未通过：1 个错误，0 个告警"
+        ],
+        "stderrTail": []
+      },
+      {
+        "id": "sources",
+        "label": "来源登记一致性（强制要有 docs）",
+        "command": "node.exe scripts/check-sources.mjs --require-docs",
+        "exitCode": 1,
+        "ok": false,
+        "durationMs": 77,
+        "metrics": {
+          "docs": {
+            "docs": 39,
+            "entries": 39
+          }
+        },
+        "stdoutTail": [
+          "✗ [SOURCE-HASH] sources.lock.json — docs/02_入口_决策登记.md sha256 漂移（登记 c006066d78e9…，实际 8d83007f152a…）",
+          "   Fix: 源文档已变更：重新评审提炼内容，确认后运行 node scripts/gen-sources-lock.mjs（禁止静默改哈希）",
+          "",
+          "✔ sources 一致：39 份文档 / 39 条登记"
+        ],
+        "stderrTail": []
+      },
+      {
+        "id": "lock",
+        "label": "来源锁确定性（不写盘）",
+        "command": "node.exe scripts/gen-sources-lock.mjs --check",
+        "exitCode": 1,
+        "ok": false,
+        "durationMs": 69,
+        "metrics": {},
+        "stdoutTail": [
+          "✗ sources.lock.json 与 docs/ 不一致",
+          "  哈希变化（源文档已改）: docs/02_入口_决策登记.md",
+          "  Fix: 重新评审上述文档的提炼内容，然后运行 node scripts/gen-sources-lock.mjs"
+        ],
+        "stderrTail": []
+      },
+      {
+        "id": "patch",
+        "label": "YAML 语义 + 算力预算 + !!js 允许清单",
+        "command": "node.exe scripts/check-patch-yaml.mjs --require-yaml",
+        "exitCode": 0,
+        "ok": true,
+        "durationMs": 97,
+        "metrics": {},
+        "stdoutTail": [
+          "   建议: 预期行为：无需改；本工具按字符串处理该值。若要精确类型校验，把它换成静态值（编译期可判定的写法）",
+          "",
+          "结构: 插件 28 个 / preset: project-dev-flow / customSkillDirs 1 项 / section 846 字符 / interrupt=false / !!js 降级 3 处（预期）",
+          "✔ 通过：YAML 语义与结构符合契约（3 个告警，其中 !!js 降级属预期）"
+        ],
+        "stderrTail": []
+      },
+      {
+        "id": "test",
+        "label": "包内契约测试",
+        "command": "node.exe --test tests/validate-package.test.mjs tests/check-patch-yaml.test.mjs tests/section.test.mjs tests/contract-consistency.test.mjs",
+        "exitCode": 0,
+        "ok": true,
+        "durationMs": 2010,
+        "metrics": {},
+        "stdoutTail": [
+          "ℹ cancelled 0",
+          "ℹ skipped 0",
+          "ℹ todo 0",
+          "ℹ duration_ms 1952.834"
+        ],
+        "stderrTail": []
+      },
+      {
+        "id": "test:source",
+        "label": "作者侧集成测试",
+        "command": "node.exe --test tests/source-integration.test.mjs",
+        "exitCode": 0,
+        "ok": true,
+        "durationMs": 180,
+        "metrics": {},
+        "stdoutTail": [
+          "ℹ cancelled 0",
+          "ℹ skipped 0",
+          "ℹ todo 0",
+          "ℹ duration_ms 123.1629"
+        ],
+        "stderrTail": []
+      },
+      {
+        "id": "pack",
+        "label": "打包文件面",
+        "command": "npm pack --dry-run --json --ignore-scripts",
+        "exitCode": 0,
+        "ok": true,
+        "durationMs": 562,
+        "metrics": {
+          "pack": {
+            "files": 72,
+            "size": 186698,
+            "filename": "yitian951012-dsh-project-dev-flow-2.1.2.tgz"
+          }
+        },
+        "stdoutTail": [
+          "    \"entryCount\": 72,",
+          "    \"bundled\": []",
+          "  }",
+          "]"
+        ],
+        "stderrTail": []
+      }
+    ],
+    "failed": [
+      "validate",
+      "sources",
+      "lock"
+    ],
+    "note": null
+  },
+  "acceptance": {
+    "present": false,
+    "status": "not-run",
+    "note": "未运行真实会话验收（node scripts/acceptance-session.mjs）"
+  },
+  "notVerified": [
+    "真实会话中的技能自动路由与 slash 调用",
+    "工具 schema 与 token 实测",
+    "真实模型的任务成功率"
+  ],
+  "_backfill": {
+    "note": "事后补录（2026-11-23）：2.1.2 发布时从未生成过本证据",
+    "method": "在 v2.1.2（6b5dd3c）的独立 worktree 上用该树自带工具生成，未改动该树文件（clean=true）",
+    "whyNotGreen": "ok=false 的唯一原因是 docs/02_入口_决策登记.md 的 sha256 已前移（该母本不在任何 git；DEC-013/014 在此之后追加），属不可复现，不是 2.1.2 代码缺陷",
+    "passedSteps": [
+      "patch",
+      "test",
+      "test:source",
+      "pack"
+    ],
+    "metricsGap": "metrics 为空是该树自带 verify.mjs 只认 \"# tests\"、而 Node 24 reporter 输出 \"ℹ tests\"（2.1.3 第 13 条已修）；2.1.2 树真实数字 tests 168 / suites 37 记在 compat-2.1.2 的更正说明里",
+    "evidenceLevel": "unavailable"
+  }
+}

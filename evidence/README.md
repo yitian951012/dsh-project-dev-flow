@@ -33,3 +33,16 @@
 
 每份源文档的去向与哈希记录在 [`../sources.lock.json`](../sources.lock.json)；本目录只登记**证据级别与案例对应**，不复制源文档正文。
 源文档变更后先跑 `node scripts/check-sources.mjs`，不一致时重新评审提炼内容，而不是静默更新哈希。
+
+## 5. 发布证据索引（`release-*.json|md`）
+
+`release-evidence.mjs` 在 2.1.1 才引入，因此 2.1.0 及更早没有同类文件。逐版状态：
+
+| 版本 | 文件 | verify 结论 | 基线 commit | tests / pack | Node / 包内 YAML | 三态 | 备注 |
+| :--- | :--- | :---: | :--- | :--- | :--- | :---: | :--- |
+| `2.1.0` | **无** | n/a | — | — | — | unavailable（不适用） | 发布当时无 `release-evidence.mjs`；可复现证据是 npm 上的 tarball：`shasum 5c10910c…`、`gitHead 3f32e9d`、55 files（`npm view …@2.1.0 dist`） |
+| `2.1.1` | `release-2.1.1.json|md` | ok=true | `36640ae` | 165 / 36；68 files | v22.23.0 / 未验证 | bundled | 发布当时生成；该版未发布到 npm |
+| `2.1.2` | `release-2.1.2.json|md` | ok=**false** | `6b5dd3c` | metrics 空（该树脚本缺陷）；72 files | v24.22.3 / 未验证 | **unavailable**（事后补录） | 唯一失败原因是 `docs/02` 哈希前移（不可复现）；`patch/test/test:source/pack` 均 exit 0；见文件内「补录说明」 |
+| `2.1.3` | `release-2.1.3.json|md` | ok=true | `8e87e98` | 170 / 38；72 files | v24.22.3 / 2.9.1 | bundled | 发布当时生成；**npm 未发布**，`registry latest` 仍是 2.1.0 |
+
+> `pack` 数是「生成证据那一刻的打包面」；证据文件入库后包体变大（2.1.3 现为 76 files）。发布包的指纹以 registry 的 `dist.shasum` 为准，未发布时不作承诺。
