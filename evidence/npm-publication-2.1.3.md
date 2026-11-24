@@ -42,3 +42,13 @@
 
 - `2.1.1` / `2.1.2` 发布到 npm：**未执行**（需 6 位 TOTP 或 Automation token；发布顺序与 `latest` 策略需人定）。
 - 移动 `v2.1.3` tag 使其与 npm 产物逐字节一致：**未执行**（改写已发布 tag，属破坏性操作，需人授权）。
+
+## 5. 发布与附件核对（2026-11-24 补记）
+
+| 项 | 值 |
+| :--- | :--- |
+| 发布时间 | `2026-11-23T14:33:52Z`（本地 11-23 22:33），由主理人执行 |
+| `dist-tags.latest` | `2.1.3` |
+| GitHub Release 附件（`v2.1.3`） | `yitian951012-dsh-project-dev-flow-2.1.3.tgz`，200217 B，asset `digest = sha256:77381acf…`（与 registry 字节一致） |
+| GitHub Release 附件（`v2.1.1` / `v2.1.2`） | 各自 tag 树构建物（177500 / 186698 B），正文已标「与 registry 无法比对（E404）」 |
+| 核对命令 | `gh release upload <tag> <tgz> --clobber -R yitian951012/dsh-project-dev-flow` → exit 0；`gh release view <tag> --json assets` 回读的 `digest` 与本地 SHA256 逐项一致 |

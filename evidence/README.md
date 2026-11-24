@@ -41,8 +41,8 @@
 | 版本 | 文件 | verify 结论 | 基线 commit | tests / pack | Node / 包内 YAML | 三态 | 备注 |
 | :--- | :--- | :---: | :--- | :--- | :--- | :---: | :--- |
 | `2.1.0` | **无** | n/a | — | — | — | unavailable（不适用） | 发布当时无 `release-evidence.mjs`；可复现证据是 npm 上的 tarball：`shasum 5c10910c…`、`gitHead 3f32e9d`、55 files（`npm view …@2.1.0 dist`） |
-| `2.1.1` | `release-2.1.1.json|md` | ok=true | `36640ae` | 165 / 36；68 files | v22.23.0 / 未验证 | bundled | 发布当时生成；该版未发布到 npm |
+| `2.1.1` | `release-2.1.1.json|md` | ok=true | `36640ae` | 165 / 36；68 files | v22.23.0 / 未验证 | bundled | 发布当时生成；该版**未发布到 npm**（registry 无该版本；截至 2026-11-24 `latest = 2.1.3`） |
 | `2.1.2` | `release-2.1.2.json|md` | ok=**false** | `6b5dd3c` | metrics 空（该树脚本缺陷）；72 files | v24.22.3 / 未验证 | **unavailable**（事后补录） | 唯一失败原因是 `docs/02` 哈希前移（不可复现）；`patch/test/test:source/pack` 均 exit 0；见文件内「补录说明」 |
-| `2.1.3` | `release-2.1.3.json|md` | ok=true | `8e87e98` | 170 / 38；72 files | v24.22.3 / 2.9.1 | bundled | 发布当时生成；**npm 未发布**，`registry latest` 仍是 2.1.0 |
+| `2.1.3` | `release-2.1.3.json|md` | ok=true | `8e87e98` | 170 / 38；72 files | v24.22.3 / 2.9.1 | bundled | **早于 npm 发布的快照**（生成于 2026-11-23 21:39）；同版随后发布到 npm：2026-11-23T14:33:52Z，`dist.shasum fc5e234c…`、78 files、`gitHead 766de1b`——以 [npm-publication-2.1.3.md](npm-publication-2.1.3.md) 为准 |
 
-> `pack` 数是「生成证据那一刻的打包面」；证据文件入库后包体变大（2.1.3 现为 76 files）。发布包的指纹以 registry 的 `dist.shasum` 为准，未发布时不作承诺。
+> `pack` 数是「生成证据那一刻的打包面」；证据文件入库后包体变大（2.1.3 现为 79 files）。发布包的指纹以 registry 的 `dist.shasum` 为准：`2.1.3` 已发布（`fc5e234c…`），`2.1.1` / `2.1.2` 未发布、不作承诺。

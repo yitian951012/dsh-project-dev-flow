@@ -52,3 +52,18 @@
 - 真实模型的任务成功率
 
 > 本清单证明的是「当前 commit 上包内检查全部通过」。它**不证明** DSH 装配、技能路由、升级回滚可用；那需要隔离 profile 的真实安装记录。
+
+## 发布状态（2026-11-24 补记）
+
+本文件生成于 npm 发布之前（2026-11-23 21:39 本地）。**同版随后已发布到 npm**：
+
+| 项 | 值 |
+| :--- | :--- |
+| 发布时间 | `2026-11-23T14:33:52Z`（本地 11-23 22:33） |
+| `dist-tags.latest` | `2.1.3` |
+| `dist.shasum` | `fc5e234ce4fe6fcfddf59891ce3d4e81953e96a3` |
+| `dist.fileCount` | 78 |
+| `gitHead` | `766de1b`（不是 tag `v2.1.3` 的 `4702071`，差异见 [npm-publication-2.1.3.md](npm-publication-2.1.3.md)） |
+| Release 附件 | 同名 tgz，200217 B，`sha256 77381acf…`，与 registry 字节一致 |
+
+因此本文件里「pack 72 files / commit 8e87e98」是**发布前快照**，不要当成 npm 产物指纹。
