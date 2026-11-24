@@ -52,3 +52,17 @@
 | GitHub Release 附件（`v2.1.3`） | `yitian951012-dsh-project-dev-flow-2.1.3.tgz`，200217 B，asset `digest = sha256:77381acf…`（与 registry 字节一致） |
 | GitHub Release 附件（`v2.1.1` / `v2.1.2`） | 各自 tag 树构建物（177500 / 186698 B），正文已标「与 registry 无法比对（E404）」 |
 | 核对命令 | `gh release upload <tag> <tgz> --clobber -R yitian951012/dsh-project-dev-flow` → exit 0；`gh release view <tag> --json assets` 回读的 `digest` 与本地 SHA256 逐项一致 |
+
+## 6. `2.1.1` / `2.1.2` 补发（2026-11-24）
+
+主理人在自己终端执行两条 `npm publish --access public --tag legacy --ignore-scripts`（分别从 `v2.1.1`（`8c84fbe`）与 `v2.1.2`（`6b5dd3c`）的干净工作树发布）。**`latest` 未回退**，两版挂在 `legacy` 上。
+
+| 版本 | 发布时间 | `dist.shasum` | `fileCount` | dist-tag | 与归档附件（GitHub Release） |
+| :--- | :--- | :--- | ---: | :--- | :--- |
+| `2.1.1` | `2026-11-24T08:21:18Z` | `b64fd9d0de03c5e3c85396122194ca5e32959169` | 68 | `legacy`（历史指向） | **一致**（附件 SHA1 = 同值） |
+| `2.1.2` | `2026-11-24`（同批） | `406b6f9da2e363813274db39928e94de61c9d270` | 72 | `legacy`（当前指向） | **一致**（附件 SHA1 = 同值） |
+| `2.1.3` | `2026-11-23T14:33:52Z` | `fc5e234ce4fe6fcfddf59891ce3d4e81953e96a3` | 78 | `latest` | **一致**（附件 SHA1 = 同值） |
+
+`dist-tags` 终态（registry 直连核对）：`{"latest":"2.1.3","legacy":"2.1.2"}`；`versions` = `0.0.0-stage` / `2.0.2` / `2.1.0` / `2.1.1` / `2.1.2` / `2.1.3`。
+
+注：`2.1.1` / `2.1.2` 是从 detached 工作树发布的，registry 的 `gitHead` 为空（无 gitHead 可核对）；两版的**字节指纹**已与归档附件核对一致。

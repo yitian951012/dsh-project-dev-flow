@@ -12,7 +12,7 @@
 
 安装方式（注意通道差异）：
 
-- npm 包：`dsh plugin --profile <profile> add @yitian951012/dsh-project-dev-flow`——装到的是 **`2.1.3`**（registry `latest = 2.1.3`，2026-11-23 发布，`gitHead 766de1b`）。`2.1.1` / `2.1.2` 未发布。
+- npm 包：`dsh plugin --profile <profile> add @yitian951012/dsh-project-dev-flow`——装到的是 **`2.1.3`**（registry `latest = 2.1.3`，2026-11-23 发布，`gitHead 766de1b`）；`2.1.1` / `2.1.2` 已于 2026-11-24 补发，但挂在 `legacy` tag（当前 `legacy = 2.1.2`），须显式写版本号安装。
 - GitHub 源：`dsh plugin --profile <profile> add github:yitian951012/dsh-project-dev-flow`——取仓库当前版本（含未发布修正）；该通道的写法本身未在 2.1.3 上重跑验证。
 
 1. 在 DSH 的 Plugins 面板中以 bundle 安装方式选择本包目录。

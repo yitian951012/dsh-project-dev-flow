@@ -67,7 +67,7 @@ dsh-project-dev-flow/
 安装后**新开一个会话**，在模式选择器中选择「项目开发流程」。
 已存在的会话保留启动时的 preset，不会热切换。
 
-升级：先移除旧包再安装新包。**npm 上 `latest` 是 `2.1.3`**（2026-11-23T14:33Z 发布，`gitHead 766de1b`）：`dsh plugin --profile <profile> add @yitian951012/dsh-project-dev-flow` 现在装到的就是 `2.1.3`。`2.1.1` / `2.1.2` **从未发布**（registry 无该版本），要它们只能从仓库按 tag 克隆安装。
+升级：先移除旧包再安装新包。**npm 上 `latest` 是 `2.1.3`**（2026-11-23T14:33Z 发布，`gitHead 766de1b`）：`dsh plugin --profile <profile> add @yitian951012/dsh-project-dev-flow` 现在装到的就是 `2.1.3`。`2.1.1` / `2.1.2` 也已补发（2026-11-24），但挂在 **`legacy`** dist-tag 上（当前 `legacy = 2.1.2`）；要装它们须显式写版本，如 `…add @yitian951012/dsh-project-dev-flow@2.1.1`。
 卸载：移除 bundle；包内技能与 preset 一并消失，项目自己的 `.dsh/skills`、`.agents/skills` 不受影响。
 面板中的标题、描述与详情页来自 `locale/`、`detail/`、`icon.svg`，不需要启用插件即可查看。
 
@@ -138,7 +138,7 @@ npm run acceptance -- --profile <name>   # 真实会话验收：技能自动路�
 `acceptance` 的前置条件是目标 profile 有一条**可用模型路由**（桌面端凭据不会自动注入 CLI）；脚本用 `--patch` 临时挂载本包技能目录，不改宿主 profile。返回码：0 通过、1 未命中、3 被凭据/适配器阻塞。
 
 发布前的最小证据链：`verify` 全绿 + `smoke:profile` 全绿 + 同一 commit 上生成 `evidence`。
-**发布通道现状**：仓库版本 `2.1.3` = registry 的 `latest` `2.1.3`（`dist.shasum fc5e234c…`、`78 files`、`gitHead 766de1b`）；`2.1.1` / `2.1.2` 未发布。npm 产物与 tag `v2.1.3`（`4702071`）相差两份证据文件，差异记录在 [evidence/npm-publication-2.1.3.md](evidence/npm-publication-2.1.3.md)。
+**发布通道现状**：仓库版本 `2.1.3` = registry 的 `latest` `2.1.3`（`dist.shasum fc5e234c…`、`78 files`、`gitHead 766de1b`）；`2.1.1`（`b64fd9d0…`、68 files）与 `2.1.2`（`406b6f9d…`、72 files）已于 2026-11-24 补发，挂在 `legacy`（当前 `legacy = 2.1.2`），`latest` 未回退。npm 产物与 tag `v2.1.3`（`4702071`）相差两份证据文件，差异记录在 [evidence/npm-publication-2.1.3.md](evidence/npm-publication-2.1.3.md)。
 跨版本升级与回滚用 `node scripts/smoke-profile.mjs --upgrade-from <旧版本.tgz>`（先装旧包 → 装本包 → 回滚，核对版本号）。
 未跑真实会话时，只能写「包内验证与隔离装配通过，真实会话行为未验证」。
 
