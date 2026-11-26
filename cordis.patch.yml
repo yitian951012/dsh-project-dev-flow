@@ -141,3 +141,5 @@
           - id: tool-plugin-market
             name: '@deepseek-ai/dsh-plugin-market/tools'
             disabled: true
+    - id: project-dev-flow-board
+      name: '@yitian951012/dsh-project-dev-flow'

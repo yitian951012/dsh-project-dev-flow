@@ -1,0 +1,122 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/yitian951012/dsh-project-dev-flow/schema/board.schema.json",
+  "title": "项目进度看板数据契约 v1",
+  "description": "看板只读派生层。derived 由 import-board 独占写入；overlay 由看板独占写入（3.1.0 起）。任何一方都不改对方字段。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "rev", "project", "source", "items", "groups"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "rev": { "type": "integer", "minimum": 0, "description": "内容变更时单调 +1；无变更不写盘" },
+    "project": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["root"],
+      "properties": {
+        "root": { "type": "string", "description": "工作区根目录（绝对路径）" },
+        "name": { "type": "string" }
+      }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sha", "docs"],
+      "properties": {
+        "sha": { "type": "string", "description": "全部源文档内容哈希；变了就是 drift" },
+        "docs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["role", "path", "sha"],
+            "properties": {
+              "role": { "enum": ["status", "wbs", "decisions", "issues", "next"] },
+              "path": { "type": "string" },
+              "sha": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "kind", "title", "anchor", "derived"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "kind": { "enum": ["stage", "gate", "wbs", "decision", "task", "issue", "next"] },
+          "title": { "type": "string" },
+          "anchor": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["doc", "line", "sha"],
+            "properties": {
+              "doc": { "type": "string" },
+              "line": { "type": "integer", "minimum": 1 },
+              "sha": { "type": "string" }
+            }
+          },
+          "derived": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["status"],
+            "properties": {
+              "status": { "enum": ["done", "partial", "missing", "hold", "unknown"] },
+              "lane": { "enum": ["todo", "doing", "verify", "decision", "blocked", "done"] },
+              "stage": { "type": "string", "description": "流程节点 id（如 STAGE-5）；由清单 stageMap 映射，缺失则进未归属" },
+              "area": { "type": "string" },
+              "evidence": { "type": "string" },
+              "severity": { "type": "string" },
+              "criteria": { "type": "string" },
+              "why": { "type": "string" },
+              "related": { "type": "string" },
+              "cost": { "type": "string" }
+            }
+          },
+          "overlay": {
+            "type": "object",
+            "additionalProperties": false,
+            "description": "3.1.0 起可写；导入器只保留、不修改",
+            "properties": {
+              "lane": { "enum": ["todo", "doing", "verify", "decision", "blocked", "done"] },
+              "order": { "type": "number" },
+              "note": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "groups": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "total", "done"],
+        "properties": {
+          "id": { "type": "string" },
+          "total": { "type": "integer", "minimum": 0 },
+          "done": { "type": "integer", "minimum": 0 },
+          "partial": { "type": "integer", "minimum": 0 },
+          "missing": { "type": "integer", "minimum": 0 }
+        }
+      }
+    },
+    "journal": {
+      "type": "array",
+      "description": "仅写通道使用（3.1.0）；导入器不改写既有条目",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": ["rev", "op", "at"],
+        "properties": {
+          "rev": { "type": "integer" },
+          "op": { "enum": ["import", "move", "patch", "undo"] },
+          "at": { "type": "string" }
+        }
+      }
+    }
+  }
+}

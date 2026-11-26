@@ -46,7 +46,7 @@ function parserVersion() {
 }
 
 async function fileHashes() {
-  const files = ['package.json', 'package-lock.json', 'cordis.patch.yml', 'sources.lock.json'];
+  const files = ['package.json', 'package-lock.json', 'cordis.patch.yml', 'sources.lock.json', 'client/client.js', 'schema/board.schema.json', 'index.js'];
   const out = {};
   for (const rel of files) {
     const abs = path.join(PLUGIN_ROOT, rel);
@@ -111,6 +111,7 @@ function renderMarkdown(evidence) {
   lines.push(`| 版本 | \`${evidence.version}\` |`);
   lines.push(`| engines.dsh | \`${evidence.engines.dsh}\` |`);
   lines.push(`| engines.node | \`${evidence.engines.node ?? '未验证'}\` |`);
+  lines.push(`| dsh.client | ${evidence.dshClient ? `\`${evidence.dshClient.platform ?? '未声明 platform'}\`` : '未声明'} |`);
   lines.push(`| commit | \`${evidence.git.commit ?? '未验证'}\` |`);
   lines.push(`| 工作区干净 | ${evidence.git.clean === null ? '未验证' : evidence.git.clean ? '是' : '否'} |`);
   lines.push(`| Node | \`${evidence.runtime.node}\` |`);
@@ -180,6 +181,7 @@ async function main(argv) {
     package: pkg.name,
     version: pkg.version,
     engines: pkg.engines ?? {},
+    dshClient: pkg.dsh?.client ?? null,
     runtime: { node: process.version, npm: npmVersion, yaml: parserVersion() },
     git: gitInfo(),
     hashes: await fileHashes(),

@@ -1,5 +1,54 @@
 # CHANGELOG
 
+## 3.0.0 — 2026-11-26
+
+**能力版本：新增 Web 看板（只读）与 `project_board` 只读工具；engines.dsh 地板收窄至 `>=0.2.3-alpha.2 <0.3.0-0`（DEC-017）。不改 preset id、5 个技能与六阶段判定口径；写通道顺延 3.1.0。**
+
+> 日期口径：能力与面板修复是 **2026-11-25 初稿**；**2026-11-26 收口**——第 12 项适配器修复，以及兼容口径、计数与发布状态的订正。本版**已 commit + tag `v3.0.0`（本地）**，但**未发布 npm、未 push**；状态见下「验收状态」。
+
+### 能力
+
+1. **`schema/board.schema.json`**：看板数据契约 v1。`derived` 由导入器独占，`overlay` 留给 3.1.0 的看板写入，任何一方都不改对方字段。
+2. **`scripts/import-board.mjs`**：从 `docs/` 的五类台账（状态看板 / WBS / 待裁决 / 剩余问题 / 下一步）派生 `.dsh/project-board/board.json`。表头签名优先于文件名；认不出的表跳过并计数，不猜。**确定性**：同一输入两次输出字节一致；内容未变不写盘（no-op 不递增 `rev`）；`--check` 供 CI 守卫，漂移 exit 1。
+3. **`index.js`（Host half）**：注册只读工具 `project_board`（`action=list` / `action=projects`），并在有 `webServer` 时挂只读路由 `/project-board/board`；无路由时面板降级为空态，不影响装配。agent 拿到的摘要有上限（非 done 条目最多 40 条）。
+4. **`client/client.js`（Web half）**：`main` key 与 `sidebar.panellist` id 同为 `project-board`，侧栏出现入口；面板显示分线进度与待办/待裁决/阻塞三列。只读，无拖拽、无假 affordance。
+5. **多项目注册表**：`config.projects[]` 用绝对路径登记项目；面板左栏列项目指标、右侧看选中项目；新增 `GET /project-board/projects` 与 `board?project=`，工具加 `action=projects`。没有配置时回落当前工作空间。
+6. **项目接入清单**：`schema/manifest.schema.json` + `scripts/adapt-project.mjs`（只读自检，`--write` 落 `.dsh/project-board/manifest.json`）；导入器支持清单钉角色与 `--docs` 覆盖。
+7. **外置 panel 不再另起包**：看板作为本插件的一部分交付，包名不变。
+8. **项目配置归用户层**：仓库内 `cordis.patch.yml` 只保留插件行；`projects` 写在 `<profile>/cordis.patch.yml` 的同 id 行（loader 在 bundle 层之后应用），重装/升级不丢，发布物不含本机路径——由 `tests/board-config.test.mjs` 的守卫钉住。
+9. **面板交互补齐**：顶部项目切换下拉（含不可用项与指标）、绑定项目弹窗（`validate` 预检 + `bind` 写配置 + 失败给可复制片段 + 成功后 `import`）、按流程节点矩阵（3 列 / 格内 2 张 / 超出折叠）。弹窗的「浏览…」接宿主 `uiWorkspace.pickDirectory()`（无该服务时按钮禁用，不假装可用）；新增 POST 路由 `/project-board/validate|bind|import`。**矩阵的行来自节点卡，不写死**：行集合由 `kind=stage` / `kind=gate` 的节点卡派生，行头编号取 id 末位数字（`STAGE-3`→`03`、`GATE-2`→`G2`）、标题取卡片，同一 `anchor.doc` 内按 `anchor.line` 升序（跨文档行号不可比，节点最多的文档为主序列、其余文档整体排在后面）；节点卡只造行，不计入任何列的张数。没有节点卡时回退固定 8 阶段 + 2 门禁 = 10 行；头部「阶段 N / 门禁 M」与图例按**实际行**计数（有节点卡时如 6/2，回退为 8/2）。`stageMap` 只决定非节点卡的 `derived.stage` 从而落到哪一行；没有对应行的非节点卡进未归属桶且**不渲染**——矩阵不出现「未归属阶段」兜底行（P-5）。
+10. **缺文档目录自动铺底**：`scripts/scaffold-docs.mjs` 生成 5 份最小台账（阶段/WBS/待裁决/剩余问题/下一步），表头与导入器签名对齐、**已存在一律跳过**；`bind` 在 `scaffold !== false` 且目录缺失时先铺底再登记，`validate` 返回 `docsMissing` 供弹窗提示。
+11. **绑定落点改为注册表（修 3.0.0 迭代中的真实缺陷）**：此前用 `configEditor.edit` 写 `config.projects`，实测回调拿到的是行内 config 本身，导致补丁里生成 `config.config.projects` 嵌套，插件重载后读不到；且 `edit` 会重载该行，进程内缓存同时被清空。改为 `<profile>/plugin-data/yitian951012.dsh-project-dev-flow/projects.json` 单一事实源（原子写 + 进程内串行 + 按 `resolve(root)` 去重，坏文件不覆盖），config 仅作手写默认。`import` 写入前补 `mkdirSync`（此前空目录会 `ENOENT`）。
+12. **适配器修复（2026-11-26 实跑发现）**：`scripts/adapt-project.mjs` 把「表里有 1 条记录」的台账误判为**角色缺失**——`scripts/scaffold-docs.mjs` 刚生成的项目每张台账只有 1 行，接看板自检会报「缺 3 个角色」并 exit 1，与同一条 docs 能正常导入 16 张卡自相矛盾。根因是扫描条件 `t.rows.length < 2` 要求至少 2 行数据。改为 `< 1`（0 行＝只有表头，仍跳过），并由 `tests/board-adapt.test.mjs` 新增用例钉住：单行 decisions/issues/next 三表 → 五角色齐、exit 0。复现证据：修复前 `node --test tests/board-adapt.test.mjs` exit 1，修复后 4/4 通过；`node scripts/verify.mjs` 七步全绿（封板树 tests 223，见「验收状态」）。
+
+### 兼容（DEC-017）
+
+- `engines.dsh`：`>=0.2.2-rc.1 <0.3.0` → **`>=0.2.3-alpha.2 <0.3.0-0`**。两条理由：① 看板入口依赖 `sidebar.panellist`，0.2.2 线没有该槽位，装得进但入口不出来属静默降级；② 旧上限 `<0.3.0` 在 `includePrerelease` 判定下放行 `0.3.0-alpha.x`，那是未验证宿主。
+- 停在 `0.2.2-rc.x` 的环境升不上去，保持 `2.1.3`（npm `latest` = `2.1.3`；`legacy` 当前为 `2.1.2`）。
+- 同 profile 不可双装：包名与 preset insert id 未变，升级/回滚一律先卸再装。
+- 工具面新增 `project_board`：**既有会话保留启动时 preset，不会热切换**，需新开会话才能看到该工具。
+
+### 未变
+
+preset id `project-dev-flow`、5 个技能与 3 自动 / 2 显式分工、六阶段判定口径、方法 / 模板 / 案例、`engines.node ^24.22.3 || >=26.13.1`。
+
+### 验收状态（如实披露）
+
+> 计数按树计，**以干净树 `npm run verify` 的输出为准**：本段是 **3.0.0 封板树（2026-11-26）**的实测值，入库的 `evidence/release-3.0.0.*` 就是该树上的实跑记录（`git.commit` 指向封板提交，`tests 223` / `pack 96 files`）。证据生成时工作区里还有**未入库的 2026-11-25 旧树快照两文件**（commit `b53a433`、工作区不干净，记录 `tests 181` / `pack 85 files`），它们在该次运行中被本轮证据覆盖，因此证据内 `git.clean = false` 是如实的；提交证据后工作树干净。旧快照数字**仅作历史**，与 223 / 96 不是同一棵树。后续若再加测试，按新的 verify 输出更新本段。
+
+- 包内门禁：`node scripts/verify.mjs` → 七步全绿（validate / sources / lock / patch / test / test:source / pack）。封板树（干净）：`tests 223`（`pass 223`）、`test:source 2`、pack **96 files**。verify 尾部另打印「目标 DSH 运行时：0.2.3-alpha.2（validate 已比对 engines.dsh）」——现行区间就是在该运行时上比对通过的。看板相关用例分布在 `tests/board-import.test.mjs`（7 条）、`board-host`（4 条）、`board-config`、`board-adapt`（4 条）、`board-scaffold`、`client-panel`（19 条，含行模型 4 条：6 阶段→8 行 / 节点卡只造行 / 无 stage 卡不造幽灵行 / 无节点卡回退 10 行）。
+- 隔离 profile 装配烟测：`npm run smoke:profile` → **2026-11-26 本轮已重跑通过（exit 0）**：临时 `DSH_HOME` 里安装 → `--dump-config`（preset 装配、`tool-schedule` 的 `disabled: true` 保留）→ 卸载回滚；未覆盖真实会话中的技能自动路由与 slash。
+- 数据层：对本工作区实跑 `node scripts/import-board.mjs --root <工作区>` → `150 条`、跳过 24 张认不出的表；同输入二次导入为 no-op，`--check` exit 0。
+- **真实宿主已实测**：`install_bundle` → `application: applied`（version 3.0.0）；`Tool.listTools` 可见 `project_board`；`sidebar.panellist` occupants 含 `registrant: project-dev-flow / id: project-board / active: true`；`remove_bundle` → `applied`。
+- **卸载残留**：在 `remove_bundle` 之后侧栏条目仍 active——根因是清理函数只作为 `apply` 返回值，宿主不保证调用。已改为 `ctx.effect` 拥有的资源（Host 与 Client 两侧），并用单测钉住“卸载后工具必须注销”；**页面刷新后的实测复验尚未做**（运行中的页面仍持有旧 bundle）。
+- **路由已注册（实测）**：`/project-board/board` 在未登录会话返回 **401**，未注册路径 `/project-board/board2` 返回 **404**——路由挂上了，只是被登录门挡住。
+- **面板整页空白（已修）**：首次渲染 `board` 仍为 `undefined` 时直接读 `board.groups` → TypeError，宿主随即把整条 slot entry 清空（表现为无任何元素）。修复四处：渲染链改为 `!root → error → !board → ready`；`items`/`groups` 做数组与元素形状守卫；注册 `main` 时转发 owner props（此前被丢弃，面板永远拿不到 `useWorkspaces`）；快照选择器提到模块级，避免身份漂移击穿快照缓存。新增 `tests/client-panel.test.mjs` 3 条（无工作空间 / 首帧无数据 / 残缺数据）；该文件现共 19 条（含行模型 4 条），封板树总数 **223**（旧树快照 181 仅作历史）。
+- **取数通道**：注册形状 `webServer.register({ kind: 'exact', path, handler })` 与“客户端裸 `fetch`、按 `document.baseURI` 解析、不带鉴权头”均已用同环境可用的第三方插件源码核实。
+- **仍需用户侧验证**：登录态页面里点开面板的实际出数、卸载后刷新页面确认侧栏条目消失。本会话无法进入已登录页面，**两项均未验证**。
+- **真实会话验收**：**`not-run`**——`node scripts/acceptance-session.mjs` 未跑，不能用包内测试替代。
+- **发布状态**：**未发布 npm**（截至 2026-11-26）。npm 凭据可用（`npm whoami` → `yitian951012`），但登录态页面出数与卸载刷新尚未验证；用户于 2026-11-25 决定先不发布，本轮 2026-11-26 已完成**本地封板：已 commit + tag `v3.0.0`（本地），未发布 npm、未 push**；等两项页面验证通过后再走 npm 发布顺序。
+- **未验证**：npm 发布与 dist-tag 迁移；真实会话中的技能自动路由与 token 实测。
+
 ## 2.1.3 — 2026-11-23
 
 **修正发布：15 项（12 项文档与声明口径 + 3 项门禁/校验器）。不改 preset id、5 个技能与六阶段判定口径，不新增能力，不移动 `v2.1.2` tag。** 发布状态更新（2026-11-24）：本版**已发布到 npm** —— `2026-11-23T14:33:52Z`（本地 11-23 22:33），`dist-tags.latest = 2.1.3`，`dist.shasum = fc5e234c…`，`dist.fileCount = 78`，发布产物 `gitHead = 766de1b`（与 tag `v2.1.3` 的 `4702071` 存在两份证据文件的差异，详见 `evidence/npm-publication-2.1.3.md`）。
@@ -11,7 +60,7 @@
 3. **`0.3.0` 边界写准**（README / DETAIL / MIGRATION / 本文件）：`0.3.0` 正式版被拒，但 `0.3.0-alpha.x` 因 DSH 以 `includePrerelease` 判定仍会装入且未验证。同一区间 `>=0.2.2-rc.1 <0.3.0` 的 semver 复核：`0.2.3-alpha.2` 默认 false / `includePrerelease` **true**；`0.3.0-alpha.1` 默认 false / `includePrerelease` **true**；`0.3.0` 两种判定都 false。
 4. **Cordis 版本改正**：`0.2.3-alpha.2` 实际装配 `@deepseek-ai/cordis@4.2.0-alpha.1`（`resources/app.asar` 内 assembly 清单的 `sharedPackages`）；`4.0.0-rc.12` 属 `0.2.3-alpha.1` 时期。2.1.2 条目原写作 `4.0.0-rc.12`，是错的。
 5. **「已校验运行时」口径**：`0.2.2-rc.5` 只保留为历史验证点，并注明**没有 `dsh --version` 记录**可查；现行校验点 `0.2.3-alpha.2` 有 `dsh --version` → 输出 `0.2.3-alpha.2`、exit 0 的记录。
-6. **npm 通道限定**（README / DETAIL）：npm 上目前是 `2.1.0`，`2.1.1` / `2.1.2` / `2.1.3` 只在仓库、尚未发布；`dsh plugin … add @yitian951012/dsh-project-dev-flow` 这条命令现在装到的仍是 `2.1.0`。
+6. **npm 通道限定**（README / DETAIL，**2.1.3 发布前的当时口径**）：npm 上当时是 `2.1.0`，`2.1.1` / `2.1.2` / `2.1.3` 只在仓库、尚未发布；`dsh plugin … add @yitian951012/dsh-project-dev-flow` 那条命令当时装到的仍是 `2.1.0`。2026-11-23 起 `latest` 已是 `2.1.3`（见本节开头与「关于 2.1.3」）。
 7. **测试与打包计数一律带树标签**：不再出现无树名的计数。2.1.3 源树（工作树，`node --test` 与 `npm pack --dry-run` 实测，命令见下「验收状态」）为 `tests 170` / `suites 38`、`test:source 2`、pack 72 files（在 2.1.3 证据入库之前）；2.1.3 初始树为 `tests 168` / `suites 37`，随后契约测试与校验器单测共补入 2 条。
 8. **DETAIL 标题版本区间**：「读取与工具面（2.1.0）」改为「读取与工具面（2.1.0–2.1.3）」，不再读成只覆盖 2.1.0。
 9. **`隔离开户` → 隔离 profile**：2.1.2 条目里的错字改正（其余 `隔离 profile` 用法一致）。

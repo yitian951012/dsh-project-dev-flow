@@ -1,6 +1,6 @@
 {
   "name": "@yitian951012/dsh-project-dev-flow",
-  "version": "2.1.3",
+  "version": "3.0.0",
   "private": false,
   "license": "Apache-2.0",
   "type": "module",
@@ -25,12 +25,17 @@
     "access": "public"
   },
   "exports": {
+    ".": "./index.js",
+    "./client": "./client/client.js",
     "./package.json": "./package.json",
     "./locale/*.json": "./locale/*.json",
     "./icon": "./icon.svg"
   },
   "files": [
     "cordis.patch.yml",
+    "index.js",
+    "client",
+    "schema",
     "skills",
     "methods",
     "templates",
@@ -50,12 +55,15 @@
     "AUTHORING.md"
   ],
   "engines": {
-    "dsh": ">=0.2.2-rc.1 <0.3.0",
+    "dsh": ">=0.2.3-alpha.2 <0.3.0-0",
     "node": "^24.22.3 || >=26.13.1"
   },
   "dsh": {
     "bundle": {
       "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web"
     }
   },
   "scripts": {
@@ -65,7 +73,7 @@
     "check:patch": "node scripts/check-patch-yaml.mjs",
     "check:patch:ci": "node scripts/check-patch-yaml.mjs --require-yaml",
     "gen:sources": "node scripts/gen-sources-lock.mjs",
-    "test": "node --test tests/validate-package.test.mjs tests/check-patch-yaml.test.mjs tests/section.test.mjs tests/contract-consistency.test.mjs",
+    "test": "node --test tests/validate-package.test.mjs tests/check-patch-yaml.test.mjs tests/section.test.mjs tests/contract-consistency.test.mjs tests/board-import.test.mjs tests/board-host.test.mjs tests/board-config.test.mjs tests/board-adapt.test.mjs tests/board-scaffold.test.mjs tests/client-panel.test.mjs",
     "test:source": "node --test tests/source-integration.test.mjs",
     "pack:dry": "npm pack --dry-run --json --ignore-scripts",
     "verify": "node scripts/verify.mjs",

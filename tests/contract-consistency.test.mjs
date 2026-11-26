@@ -100,13 +100,15 @@ describe('运行时适配：DSH 0.2.3-alpha.2 口径（DEC-013）', () => {
     assert.equal(engineSatisfies(node, '26.12.0'), false, `engines.node=${node} 错误地接受了 26.13.1 以下的 26.12.0`);
   });
 
-  it('engines.dsh 按区间判定：接受 0.2.3-alpha.2、拒绝 0.3.0，并承认 0.3.0-alpha.x 被放行', async () => {
+  it('engines.dsh 按区间判定：接受 0.2.3-alpha.2，拒绝旧地板与 0.3.x 预发布（DEC-017）', async () => {
     const dsh = String((await engines()).dsh ?? '').trim().split(/\s+/).join(' ');
     assert.equal(engineSatisfies(dsh, '0.2.3-alpha.2'), true, `engines.dsh=${dsh} 未覆盖已校验运行时 0.2.3-alpha.2`);
+    assert.equal(engineSatisfies(dsh, '0.2.3-alpha.1'), false, `engines.dsh=${dsh} 错误地接受了旧地板以下的 0.2.3-alpha.1`);
+    assert.equal(engineSatisfies(dsh, '0.2.2-rc.5'), false, `engines.dsh=${dsh} 错误地接受了 2.x 时代的 0.2.2-rc.5`);
     assert.equal(engineSatisfies(dsh, '0.3.0'), false, `engines.dsh=${dsh} 错误地覆盖了 0.3.0`);
-    // 已知边界：0.3.0-alpha.x 在 semver 上低于 0.3.0，落在 <0.3.0 内。把放行行为钉住，
-    // 避免有人把「拒绝 0.3.0」误读成「拒绝所有 0.3.x」。
-    assert.equal(engineSatisfies(dsh, '0.3.0-alpha.1'), true, 'engines.dsh 区间写法变了：0.3.0 预发布版不再被放行，需先登记决策再改本断言');
+    // DEC-017：3.0.0 起上限写作 <0.3.0-0——旧写法 <0.3.0 在 includePrerelease 下会放行
+    // 0.3.0-alpha.x，而 3.0 的看板入口依赖 0.2.3 才有的 sidebar.panellist，不能装进未验证宿主。
+    assert.equal(engineSatisfies(dsh, '0.3.0-alpha.1'), false, 'engines.dsh 应使用 <0.3.0-0 上限（DEC-017）');
   });
 
   it('三处兼容声明以「已校验运行时」口径写明 0.2.3-alpha.2，并保留 Node 地板 24.22.3', async () => {

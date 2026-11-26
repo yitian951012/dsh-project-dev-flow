@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "projectId": "your-project-id",
+  "docsRoot": "docs",
+  "boardPath": ".dsh/project-board/board.json",
+  "tables": [
+    { "role": "status", "file": "01_入口_项目状态看板.md" },
+    { "role": "wbs", "file": "31_验收_WBS拆解明细.md" },
+    { "role": "decisions", "file": "04_入口_待裁决台账.md" },
+    { "role": "issues", "file": "15_功能_剩余问题.md" },
+    { "role": "next", "file": "17_功能_下一步工作清单.md" }
+  ]
+}
