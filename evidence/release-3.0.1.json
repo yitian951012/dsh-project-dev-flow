@@ -1,0 +1,190 @@
+{
+  "generatedAt": "2026-11-28T04:17:39.596Z",
+  "package": "@yitian951012/dsh-project-dev-flow",
+  "version": "3.0.1",
+  "engines": {
+    "dsh": ">=0.2.3-alpha.2 <0.3.0-0",
+    "node": "^24.22.3 || >=26.13.1"
+  },
+  "dshClient": {
+    "platform": "web",
+    "immediately": true,
+    "inject": [
+      "@deepseek-ai/dsh-client-ui-conversation"
+    ]
+  },
+  "runtime": {
+    "node": "v24.22.3",
+    "npm": "11.19.1",
+    "yaml": "2.9.1"
+  },
+  "git": {
+    "commit": "dced5241bb0455c673b15426e7ffb5c62f416586",
+    "clean": true,
+    "note": null
+  },
+  "hashes": {
+    "package.json": "24f9525c75c31ef7208d7d53cd87482eefb7c34f3c8231eb44989eb428b8b367",
+    "package-lock.json": "468c14ea49073791cd6a1dc3384d22097fb794f47663f5def4f4277041cea438",
+    "cordis.patch.yml": "502e61a4b1908c39a7dad7d0af7f5034736dcd4745e890e965faad06049d20be",
+    "sources.lock.json": "0baf2c78b69de61d8849cb1043a45a00d78c0e272032e6ec397bc63505eeeb62",
+    "client/client.js": "652a4564705e3ac3a6205dbbfb6372576d531c44ce15814888c232d9bc620f88",
+    "schema/board.schema.json": "d6c62e097e7ccac7b74a90e97576149c697fa34bbcbeea93dfbf5fa85eb1d230",
+    "index.js": "e8e85c0a44ad7199d22586e9e4df2974158aac322f27f0a5f0d53a4bd02164d2"
+  },
+  "verify": {
+    "ok": true,
+    "exitCode": 0,
+    "steps": [
+      {
+        "id": "validate",
+        "label": "结构 / 红线 / 链接 / 篇幅",
+        "command": "node.exe scripts/validate-package.mjs",
+        "exitCode": 0,
+        "ok": true,
+        "durationMs": 113,
+        "metrics": {},
+        "stdoutTail": [
+          "",
+          "",
+          "资产 33 个（case 3 / method 5 / adapter 1 / skill 5 / reference 10 / template 9） · docs 39 份 · lock 39 条",
+          "✔ 通过：0 个告警（不阻断）"
+        ],
+        "stderrTail": []
+      },
+      {
+        "id": "sources",
+        "label": "来源登记一致性（强制要有 docs）",
+        "command": "node.exe scripts/check-sources.mjs --require-docs",
+        "exitCode": 0,
+        "ok": true,
+        "durationMs": 70,
+        "metrics": {
+          "docs": {
+            "docs": 39,
+            "entries": 39
+          }
+        },
+        "stdoutTail": [
+          "✔ sources 一致：39 份文档 / 39 条登记"
+        ],
+        "stderrTail": []
+      },
+      {
+        "id": "lock",
+        "label": "来源锁确定性（不写盘）",
+        "command": "node.exe scripts/gen-sources-lock.mjs --check",
+        "exitCode": 0,
+        "ok": true,
+        "durationMs": 72,
+        "metrics": {},
+        "stdoutTail": [
+          "✔ sources.lock.json 已一致：39 份文档（active 25 / historical 13 / archive 1）"
+        ],
+        "stderrTail": []
+      },
+      {
+        "id": "patch",
+        "label": "YAML 语义 + 算力预算 + !!js 允许清单",
+        "command": "node.exe scripts/check-patch-yaml.mjs --require-yaml",
+        "exitCode": 0,
+        "ok": true,
+        "durationMs": 91,
+        "metrics": {},
+        "stdoutTail": [
+          "   建议: 预期行为：无需改；本工具按字符串处理该值。若要精确类型校验，把它换成静态值（编译期可判定的写法）",
+          "",
+          "结构: 插件 29 个 / preset: project-dev-flow / customSkillDirs 1 项 / section 846 字符 / interrupt=false / !!js 降级 3 处（预期）",
+          "✔ 通过：YAML 语义与结构符合契约（3 个告警，其中 !!js 降级属预期）"
+        ],
+        "stderrTail": []
+      },
+      {
+        "id": "test",
+        "label": "包内契约测试",
+        "command": "node.exe --test tests/validate-package.test.mjs tests/check-patch-yaml.test.mjs tests/section.test.mjs tests/contract-consistency.test.mjs tests/board-import.test.mjs tests/board-host.test.mjs tests/board-config.test.mjs tests/board-adapt.test.mjs tests/board-scaffold.test.mjs tests/client-panel.test.mjs tests/composer-entry.test.mjs",
+        "exitCode": 0,
+        "ok": true,
+        "durationMs": 2235,
+        "metrics": {
+          "tests": {
+            "tests": 236,
+            "suites": 38,
+            "pass": 236,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          }
+        },
+        "stdoutTail": [
+          "ℹ cancelled 0",
+          "ℹ skipped 0",
+          "ℹ todo 0",
+          "ℹ duration_ms 2179.943"
+        ],
+        "stderrTail": []
+      },
+      {
+        "id": "test:source",
+        "label": "作者侧集成测试",
+        "command": "node.exe --test tests/source-integration.test.mjs",
+        "exitCode": 0,
+        "ok": true,
+        "durationMs": 183,
+        "metrics": {
+          "tests": {
+            "tests": 2,
+            "suites": 1,
+            "pass": 2,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          }
+        },
+        "stdoutTail": [
+          "ℹ cancelled 0",
+          "ℹ skipped 0",
+          "ℹ todo 0",
+          "ℹ duration_ms 128.3076"
+        ],
+        "stderrTail": []
+      },
+      {
+        "id": "pack",
+        "label": "打包文件面",
+        "command": "npm pack --dry-run --json --ignore-scripts",
+        "exitCode": 0,
+        "ok": true,
+        "durationMs": 573,
+        "metrics": {
+          "pack": {
+            "files": 97,
+            "size": 277007,
+            "filename": "yitian951012-dsh-project-dev-flow-3.0.1.tgz"
+          }
+        },
+        "stdoutTail": [
+          "    \"entryCount\": 97,",
+          "    \"bundled\": []",
+          "  }",
+          "]"
+        ],
+        "stderrTail": []
+      }
+    ],
+    "failed": [],
+    "note": null
+  },
+  "acceptance": {
+    "present": false,
+    "status": "not-run",
+    "note": "未运行真实会话验收（node scripts/acceptance-session.mjs）"
+  },
+  "notVerified": [
+    "真实会话中的技能自动路由与 slash 调用",
+    "工具 schema 与 token 实测",
+    "真实模型的任务成功率"
+  ]
+}
