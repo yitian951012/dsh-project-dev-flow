@@ -1,6 +1,6 @@
 {
   "name": "@yitian951012/dsh-project-dev-flow",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "private": false,
   "license": "Apache-2.0",
   "type": "module",
@@ -63,7 +63,11 @@
       "patch": "./cordis.patch.yml"
     },
     "client": {
-      "platform": "web"
+      "platform": "web",
+      "immediately": true,
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-conversation"
+      ]
     }
   },
   "scripts": {
@@ -73,7 +77,7 @@
     "check:patch": "node scripts/check-patch-yaml.mjs",
     "check:patch:ci": "node scripts/check-patch-yaml.mjs --require-yaml",
     "gen:sources": "node scripts/gen-sources-lock.mjs",
-    "test": "node --test tests/validate-package.test.mjs tests/check-patch-yaml.test.mjs tests/section.test.mjs tests/contract-consistency.test.mjs tests/board-import.test.mjs tests/board-host.test.mjs tests/board-config.test.mjs tests/board-adapt.test.mjs tests/board-scaffold.test.mjs tests/client-panel.test.mjs",
+    "test": "node --test tests/validate-package.test.mjs tests/check-patch-yaml.test.mjs tests/section.test.mjs tests/contract-consistency.test.mjs tests/board-import.test.mjs tests/board-host.test.mjs tests/board-config.test.mjs tests/board-adapt.test.mjs tests/board-scaffold.test.mjs tests/client-panel.test.mjs tests/composer-entry.test.mjs",
     "test:source": "node --test tests/source-integration.test.mjs",
     "pack:dry": "npm pack --dry-run --json --ignore-scripts",
     "verify": "node scripts/verify.mjs",

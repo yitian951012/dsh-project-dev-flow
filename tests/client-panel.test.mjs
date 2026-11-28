@@ -5,22 +5,30 @@ import { fileURLToPath } from 'node:url'
 
 const CLIENT = fileURLToPath(new URL('../client/client.js', import.meta.url))
 
-/** 用一个最小 React 影子装载 client.js：槽位注册拿得到组件，组件可被调用一次。 */
+/**
+ * 用一个最小 React 影子装载 client.js：槽位注册拿得到组件，组件可被调用一次。
+ * 会话输入框入口新增了 useRef / useCallback 与模块装载期的 react-dom 依赖：
+ * 影子必须补齐，否则 client.js 的新路径根本无法装进夹具（此处只保证可装载，不模拟 DOM）。
+ */
 function loadClient(injected) {
   const pick = (init) => (injected && Object.prototype.hasOwnProperty.call(injected, 'value') ? injected.value : init)
   const React = {
     Fragment: Symbol('Fragment'),
     createElement: (type, props, ...children) => ({ type, props: props ?? {}, children }),
     useState: (init) => [pick(init), () => {}],
-    useEffect: () => {}
+    useEffect: () => {},
+    useRef: (init) => ({ current: init }),
+    useCallback: (fn) => fn
   }
   let captured
-  const window = { __ModuleLoader__: { load: (m) => { captured = m } } }
+  const window = { innerWidth: 1280, innerHeight: 720, __ModuleLoader__: { load: (m) => { captured = m } } }
   new Function('window', readFileSync(CLIENT, 'utf8'))(window)
   assert.ok(captured, 'client.js 没有调用 __ModuleLoader__.load')
   assert.equal(captured.id, '@yitian951012/dsh-project-dev-flow')
   return captured.factory((name) => {
     if (name === 'react') return React
+    // 入口面板在模块装载期就 require('react-dom')：影子 createPortal 就地返回节点。
+    if (name === 'react-dom') return { createPortal: (node) => node }
     throw new Error(`未预期的模块依赖：${name}`)
   })
 }
@@ -30,6 +38,8 @@ function mount(mod, props, services = {}) {
   const effects = []
   const ctx = {
     effect: (fn) => { effects.push(fn()) },
+    // locale 服务可能不存在：入口自身有本地回退字典，夹具保持 undefined 以走回退路径。
+    get: (name) => (name === 'locale' ? services.locale : undefined),
     inject: (deps, cb) => {
       const scope = {
         layout: {
@@ -40,7 +50,14 @@ function mount(mod, props, services = {}) {
       if (Array.isArray(deps) && deps.includes('uiWorkspace')) scope.uiWorkspace = services.uiWorkspace
       cb(scope)
     },
-    slots: { register: (opts, comp) => { regs.push({ opts, comp }); return () => {} } }
+    slots: {
+      register: (opts, comp) => { regs.push({ opts, comp }); return () => {} },
+      // 新入口用 slots.inject 探测插槽是否存在：夹具视为存在，执行注册并返回可调用的 stop。
+      inject: (name, cb) => {
+        const dispose = typeof cb === 'function' ? cb() : undefined
+        return () => { if (typeof dispose === 'function') dispose() }
+      }
+    }
   }
   mod.apply(ctx)
   const panel = regs.find((r) => r.opts.name === 'main')

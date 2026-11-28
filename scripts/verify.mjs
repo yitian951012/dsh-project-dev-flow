@@ -38,7 +38,7 @@ const STEPS = [
   { id: 'sources', label: '来源登记一致性（强制要有 docs）', cmd: [process.execPath, ['scripts/check-sources.mjs', '--require-docs']] },
   { id: 'lock', label: '来源锁确定性（不写盘）', cmd: [process.execPath, ['scripts/gen-sources-lock.mjs', '--check']] },
   { id: 'patch', label: 'YAML 语义 + 算力预算 + !!js 允许清单', cmd: [process.execPath, ['scripts/check-patch-yaml.mjs', '--require-yaml']] },
-  { id: 'test', label: '包内契约测试', cmd: [process.execPath, ['--test', 'tests/validate-package.test.mjs', 'tests/check-patch-yaml.test.mjs', 'tests/section.test.mjs', 'tests/contract-consistency.test.mjs', 'tests/board-import.test.mjs', 'tests/board-host.test.mjs', 'tests/board-config.test.mjs', 'tests/board-adapt.test.mjs', 'tests/board-scaffold.test.mjs', 'tests/client-panel.test.mjs']] },
+  { id: 'test', label: '包内契约测试', cmd: [process.execPath, ['--test', 'tests/validate-package.test.mjs', 'tests/check-patch-yaml.test.mjs', 'tests/section.test.mjs', 'tests/contract-consistency.test.mjs', 'tests/board-import.test.mjs', 'tests/board-host.test.mjs', 'tests/board-config.test.mjs', 'tests/board-adapt.test.mjs', 'tests/board-scaffold.test.mjs', 'tests/client-panel.test.mjs', 'tests/composer-entry.test.mjs']] },
   { id: 'test:source', label: '作者侧集成测试', cmd: [process.execPath, ['--test', 'tests/source-integration.test.mjs']] },
   { id: 'pack', label: '打包文件面', cmd: [npmCommand(), ['pack', '--dry-run', '--json', '--ignore-scripts'], true] },
 ];

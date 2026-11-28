@@ -1,5 +1,27 @@
 # CHANGELOG
 
+## 3.0.1 — 2026-11-27
+
+**补丁版本：只加「会话输入框入口」。preset id、5 个技能、六阶段判定、看板与 `project_board` 工具面均不变；不加写通道（仍顺延 3.1.0）。**
+
+### 新增
+
+1. **`client/client.js`（约 +680 行）**：在 `conversation.input.left` 注册 28×28 图标（`id: project-dev-flow`、`order: 20`，排在现有「专家 / PUA」之后），点开是 360px 非模态面板；`createPortal` 到 `document.body` + `position: fixed`，向上开，空间不足下翻，视口内夹取；Esc / 点外部 / 提交阶段收起。注册走独立 `ctx.effect`，`inject` 与 `register` 各自 try/catch，槽位不存在时静默隐藏。
+2. **面板只有两块**：①「新建流程会话」——内联确认后调 `uiWorkspace.startSession`，**blank 会话原地换 preset 并保留原草稿**，非 blank 会话新开并 `whenDraftExists:'append'` 复制草稿（附件不随行）；②五个阶段技能——点击只把 `/命令` 插到**草稿首行**，不发送，`captureInsertion()` + `insertText()`（带 `draftRev` 的 CAS），非空草稿不碰 `setDraft`。
+3. **门禁**：非 `project-dev-flow` preset 会话里五行禁用并写原因（技能只挂 preset 内，插了也是死 token）；投影读不到时显示「正在读取…」并禁用，不冒充已启用。
+4. **明确不做**：不热切已有会话 preset、不 `submit()`、不注入伪造 user 消息、不在入口里打开看板（看板仍走侧栏）、不替换宿主 single 槽位。
+5. **`package.json`**：`dsh.client.immediately: true`；`dsh.client.inject: ["@deepseek-ai/dsh-client-ui-conversation"]`；版本 `3.0.0 → 3.0.1`。
+6. **测试**：新增 `tests/composer-entry.test.mjs`（注册形状、locale zh/en 键集、插入手势三态、blank / 非 blank 新建分支、硬约束静态断言）；`tests/client-panel.test.mjs` 夹具补 `slots.inject` / `useRef` / `useCallback` / `react-dom` 桩。
+7. **`scripts/verify.mjs`**：测试清单补入新文件——此前是显式列表，漏跑新测试不会报错（3.0.0 计划里记过的同类缺陷）。
+
+### 验收状态（如实披露）
+
+- 包内门禁：`node scripts/verify.mjs` → 七步全绿（validate / sources / lock / patch / test / test:source / pack）；**tests 236 / pack 97 files**（3.0.0 封板树是 223 / 96，差异来自新增测试文件）。
+- CLI 装配烟测：`npm run smoke:profile` → **2026-11-28 重跑通过（exit 0，12 项断言全绿）**。
+- 桌面端 GUI 真机验收（2026-11-28，DSH `0.2.3-alpha.2` 桌面端）：
+  - **已实测通过**：`3.0.0` 侧栏「项目看板」正常出数（项目 `计算器`）；`3.0.1` 输入框图标在 PUA 之后且不换行、面板向上弹出不裁切、非流程会话五行禁用、点击「新建流程会话」正常切换并自动选中「项目开发流程」模式、流程会话中 5 个技能可点、插入首行与 `Ctrl+Z` 一步撤销均可用。
+  - **仍未验证**：560px 窄窗换行与溢出、卸载后刷新页面侧栏/入口消失、全键盘导航（Tab/Esc）、以及 CLI `acceptance-session.mjs`（需带模型凭据的 profile）。
+
 ## 3.0.0 — 2026-11-26
 
 **能力版本：新增 Web 看板（只读）与 `project_board` 只读工具；engines.dsh 地板收窄至 `>=0.2.3-alpha.2 <0.3.0-0`（DEC-017）。不改 preset id、5 个技能与六阶段判定口径；写通道顺延 3.1.0。**

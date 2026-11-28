@@ -1219,6 +1219,622 @@ window.__ModuleLoader__.load({
           : null)
     }
 
+    /* ------------------------------------------------------------------ *
+     * 会话输入框入口（conversation.input.left）
+     * 28×28 图标按钮 + 360px 非模态面板（createPortal 到 body + position:fixed）。
+     * 只做两件事：把阶段技能命令插到草稿首行；新建 preset 会话前预置草稿。
+     * 绝不 submit / setDraft / agentPresets.select，也不读别人的 DOM。
+     * ------------------------------------------------------------------ */
+    const COMPOSER_NS = 'project-dev-flow.composer'
+    const COMPOSER_SLOT = 'conversation.input.left'
+    const COMPOSER_STYLE_ID = 'pdflow-composer-styles'
+    const COMPOSER_PRESET = 'project-dev-flow'
+    const PANEL_WIDTH = 360
+    // 提交/发送中必须收起面板：这两个阶段编辑器是只读的，面板再开就是死按钮。
+    const COMPOSER_CLOSE_PHASES = ['submitting', 'sending']
+
+    // 选择器身份必须稳定：每次渲染新建箭头函数会击穿宿主快照缓存。
+    const SELECT_INPUT_STATE = (state) => state || null
+    // 会话快照的 blank 位：blank 会话会被 connectWorkspace 解析复用，新建流程会话时要按它分支。
+    const SELECT_SESSION_BLANK = (session) => Boolean(session && session.blank === true)
+
+    // 五个阶段技能：命令只在消息首行生效，所以插入手势见 insertStage。
+    const COMPOSER_STAGES = [
+      { id: 'intake', key: 'stage.intake', command: '/project-intake', manual: false },
+      { id: 'flow', key: 'stage.flow', command: '/project-dev-flow', manual: false },
+      { id: 'docs', key: 'stage.docs', command: '/project-docs', manual: false },
+      { id: 'acceptance', key: 'stage.acceptance', command: '/project-acceptance', manual: true },
+      { id: 'distill', key: 'stage.distill', command: '/project-case-distill', manual: true }
+    ]
+
+    // 本地回退字典：locale 服务可用时以注册进 COMPOSER_NS 的同一份为准。
+    const COMPOSER_DICT = {
+      zh: {
+        'entry': '项目开发流程',
+        'a11y.open': '打开项目开发流程入口',
+        'a11y.panel': '项目开发流程面板',
+        'title': '项目开发流程',
+        'close': '关闭',
+        'status.on': '本会话已启用',
+        'status.off': '未启用 · 模式在会话创建时绑定',
+        'status.unknown': '正在读取…',
+        'new.row': '新建流程会话',
+        'new.row.keep': '在当前空白会话启用流程',
+        'new.note.keep': '当前草稿会保留：这个空白会话原地切换 preset，不会把草稿再写一遍。',
+        'new.note.copy': '当前输入会复制到新会话，附件留在原会话；只预置，不发送。',
+        'new.confirm': '新建并预置当前草稿？',
+        'new.confirm.keep': '把当前空白会话切换为「项目开发流程」？',
+        'new.cancel': '取消',
+        'new.create': '新建',
+        'new.create.keep': '启用',
+        'stages.title': '阶段技能',
+        'stages.manual': '仅手动',
+        'stages.disabled': '未绑定 project-dev-flow preset：技能只挂在 preset 内，插进去也是死 token。',
+        'footer.default': '阶段技能只插入命令，不自动发送',
+        'footer.inserted': '已插入 {cmd}（未发送）· Ctrl/⌘+Z 撤销',
+        'footer.hasCommand': '输入框已有命令，请先清空',
+        'footer.noInput': '宿主没有提供插入接口，无法写入草稿',
+        'footer.failed': '插入被拒绝（草稿版本已变），请再点一次',
+        'footer.newFail': '新建会话失败：{message}',
+        'footer.noWorkspace': '宿主没有提供会话创建接口',
+        'common.unknownError': '未知错误',
+        'stage.intake': '需求受理',
+        'stage.flow': '设计定型',
+        'stage.docs': '文档治理',
+        'stage.acceptance': '验收',
+        'stage.distill': '案例蒸馏'
+      },
+      en: {
+        'entry': 'Project dev flow',
+        'a11y.open': 'Open the project dev flow entry',
+        'a11y.panel': 'Project dev flow panel',
+        'title': 'Project dev flow',
+        'close': 'Close',
+        'status.on': 'Enabled for this session',
+        'status.off': 'Not enabled · the mode binds at session creation',
+        'status.unknown': 'Reading…',
+        'new.row': 'New flow session',
+        'new.row.keep': 'Enable the flow in this blank session',
+        'new.note.keep': 'The current draft stays here: this blank session switches preset in place, so nothing is written twice.',
+        'new.note.copy': 'The current input is copied into the new session and attachments stay here; seed only, never send.',
+        'new.confirm': 'Create it and seed the current draft?',
+        'new.confirm.keep': 'Switch this blank session to the project dev flow?',
+        'new.cancel': 'Cancel',
+        'new.create': 'Create',
+        'new.create.keep': 'Enable',
+        'stages.title': 'Stage skills',
+        'stages.manual': 'Manual only',
+        'stages.disabled': 'The project-dev-flow preset is not bound here: its skills ship inside that preset, so an inserted token is dead.',
+        'footer.default': 'Stage skills only insert the command; nothing is sent',
+        'footer.inserted': 'Inserted {cmd} (not sent) · Ctrl/⌘+Z to undo',
+        'footer.hasCommand': 'The input already starts with a command; clear it first',
+        'footer.noInput': 'The Host exposes no insertion actions, so nothing can be written',
+        'footer.failed': 'Insert refused (the draft revision moved); click again',
+        'footer.newFail': 'Could not create the session: {message}',
+        'footer.noWorkspace': 'The Host exposes no session-creation action',
+        'common.unknownError': 'Unknown error',
+        'stage.intake': 'Demand intake',
+        'stage.flow': 'Design lock-in',
+        'stage.docs': 'Document governance',
+        'stage.acceptance': 'Acceptance',
+        'stage.distill': 'Case distillation'
+      }
+    }
+
+    /* ------------------------------------------------------------------ *
+     * 样式：只用 --dsw-alias-* 语义 token，选择器统一 pdflow- 前缀。
+     * ------------------------------------------------------------------ */
+    const COMPOSER_STYLES = [
+      '.pdflow-entry{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;',
+      'padding:0;flex:none;border:0;border-radius:6px;background:transparent;cursor:pointer;',
+      'color:var(--dsw-alias-label-secondary);transition:background .12s ease,color .12s ease}',
+      '.pdflow-entry:hover{background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary)}',
+      '.pdflow-entry[data-on=true]{background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-brand-primary)}',
+      '.pdflow-entry:focus-visible{outline:1px solid var(--dsw-alias-brand-primary);outline-offset:1px}',
+      '.pdflow-anchor{display:inline-flex;flex:none}',
+      '.pdflow-panel{position:fixed;z-index:60;box-sizing:border-box;display:flex;flex-direction:column;',
+      'background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-primary);',
+      'border:1px solid var(--dsw-alias-border-l2);border-radius:12px;overflow:hidden;',
+      'font:13px/1.5 -apple-system,"Segoe UI","Microsoft YaHei",system-ui,sans-serif}',
+      '.pdflow-head{display:flex;align-items:flex-start;gap:8px;padding:11px 13px 9px;flex:none;',
+      'border-bottom:1px solid var(--dsw-alias-border-l1)}',
+      '.pdflow-htext{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}',
+      '.pdflow-title{font-size:13.5px;font-weight:650;line-height:1.35}',
+      '.pdflow-status{font-size:11px;line-height:1.4;color:var(--dsw-alias-label-secondary)}',
+      '.pdflow-status[data-on=true]{color:var(--dsw-alias-state-success-primary)}',
+      '.pdflow-x{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;flex:none;',
+      'border:0;border-radius:5px;background:transparent;color:var(--dsw-alias-label-secondary);',
+      'font:inherit;font-size:13px;line-height:1;cursor:pointer}',
+      '.pdflow-x:hover{background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary)}',
+      '.pdflow-body{display:flex;flex-direction:column;flex:1 1 auto;min-height:0;overflow:auto}',
+      '.pdflow-sec{padding:9px 13px;border-bottom:1px solid var(--dsw-alias-border-l1)}',
+      '.pdflow-sechead{margin-bottom:5px;font-size:10.5px;line-height:1.4;',
+      'color:var(--dsw-alias-label-secondary)}',
+      '.pdflow-newbt{display:flex;align-items:center;gap:6px;width:100%;padding:6px 9px;text-align:left;',
+      'border:1px dashed var(--dsw-alias-border-l2);border-radius:8px;background:transparent;',
+      'color:inherit;font:inherit;font-size:12px;cursor:pointer}',
+      '.pdflow-newbt:hover{background:var(--dsw-alias-bg-layer-2)}',
+      '.pdflow-note{margin-top:5px;font-size:10.5px;line-height:1.5;color:var(--dsw-alias-label-secondary)}',
+      '.pdflow-note[data-warn=true]{color:var(--dsw-alias-state-error-primary)}',
+      '.pdflow-confirm{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:7px 0 0}',
+      '.pdflow-confirm-q{flex:1;min-width:150px;font-size:11.5px;line-height:1.45}',
+      '.pdflow-btn{border:1px solid var(--dsw-alias-border-l2);border-radius:7px;padding:4px 9px;',
+      'font:inherit;font-size:11.5px;background:var(--dsw-alias-bg-layer-1);',
+      'color:var(--dsw-alias-label-primary);cursor:pointer}',
+      '.pdflow-btn[data-primary=true]{border-color:var(--dsw-alias-brand-primary);',
+      'color:var(--dsw-alias-brand-primary);background:var(--dsw-alias-bg-layer-2)}',
+      '.pdflow-btn:disabled{opacity:.55;cursor:not-allowed}',
+      '.pdflow-row{display:flex;align-items:center;gap:8px;width:100%;padding:6px 9px;margin-top:4px;',
+      'text-align:left;border:1px solid var(--dsw-alias-border-l1);border-radius:7px;',
+      'background:var(--dsw-alias-bg-layer-2);color:inherit;font:inherit;font-size:12px;cursor:pointer}',
+      '.pdflow-row:hover:not(:disabled){border-color:var(--dsw-alias-border-l2)}',
+      '.pdflow-row:disabled{opacity:.5;cursor:not-allowed}',
+      '.pdflow-rowname{flex:1;min-width:0;line-height:1.35}',
+      '.pdflow-rowtag{flex:none;border:1px solid var(--dsw-alias-border-l2);border-radius:4px;padding:0 4px;',
+      'font-size:9.5px;line-height:1.5;color:var(--dsw-alias-label-secondary)}',
+      '.pdflow-cmd{flex:none;font:11px/1.2 ui-monospace,Consolas,monospace;',
+      'color:var(--dsw-alias-label-secondary)}',
+      '.pdflow-foot{flex:none;padding:8px 13px;border-top:1px solid var(--dsw-alias-border-l1);',
+      'font-size:10.5px;line-height:1.5;color:var(--dsw-alias-label-secondary)}',
+      '.pdflow-foot[data-kind=ok]{color:var(--dsw-alias-brand-primary)}',
+      '.pdflow-foot[data-kind=warn]{color:var(--dsw-alias-state-error-primary)}'
+    ].join('')
+
+    /** 16px 单色流程图标：三节点汇成一条主线，颜色跟随按钮的 currentColor。 */
+    function FlowGlyph(props) {
+      const size = num(obj(props).size, 16)
+      return h('svg', {
+        width: size, height: size, viewBox: '0 0 16 16', fill: 'none',
+        stroke: 'currentColor', strokeWidth: 1.3, strokeLinecap: 'round', 'aria-hidden': 'true'
+      },
+        h('circle', { cx: 3, cy: 3.2, r: 1.6 }),
+        h('circle', { cx: 3, cy: 12.8, r: 1.6 }),
+        h('circle', { cx: 12.6, cy: 8, r: 1.6 }),
+        h('path', { d: 'M3 4.8v6.4' }),
+        h('path', { d: 'M4.6 3.2h4.4a2.4 2.4 0 0 1 2.4 2.4v.8' }),
+        h('path', { d: 'M4.6 12.8h4.4a2.4 2.4 0 0 0 2.4-2.4v-.8' }))
+    }
+
+    /** 指针按下即 preventDefault：按钮不抢输入框焦点，草稿选区与引用芯片都留在编辑器里。 */
+    function keepPointerFocus(event) {
+      if (event && typeof event.preventDefault === 'function') event.preventDefault()
+    }
+
+    /** locale 服务缺失时的回退语言：浏览器主语言是中文就用中文，其余英文。 */
+    function composerFallbackLocale() {
+      try {
+        const lang = typeof navigator === 'undefined' || !navigator ? '' : text(navigator.language)
+        if (/^zh/i.test(lang)) return 'zh'
+        if (lang) return 'en'
+      } catch { /* 忽略 */ }
+      return 'zh'
+    }
+
+    /** 模板占位符 {name}：只替换已知键，缺键时原样保留。 */
+    function composerFill(template, vars) {
+      const values = obj(vars)
+      return String(text(template)).replace(/\{(\w+)\}/g, (whole, key) => (
+        Object.hasOwn(values, key) ? text(values[key]) : whole
+      ))
+    }
+
+    /**
+     * 取文案：优先宿主 locale（字典已注册到 COMPOSER_NS），服务不可用或键缺失时
+     * 回退本地字典；两条路都取不到就显示键名。全程不抛。
+     */
+    function makeComposerTranslator(ctx) {
+      let cachedService = null
+      let cachedBind = null
+      const resolve = () => {
+        let service = null
+        try { service = ctx.get('locale') || null } catch { service = null }
+        if (!service || typeof service.bind !== 'function') return { service, bind: null }
+        if (service !== cachedService) {
+          cachedService = service
+          try { cachedBind = service.bind(COMPOSER_NS) } catch { cachedBind = null }
+        }
+        return { service, bind: cachedBind }
+      }
+      return function t(key, vars) {
+        const name = text(key)
+        if (!name) return ''
+        const found = resolve()
+        let value = ''
+        if (found.bind) {
+          try { value = text(found.bind(name)) } catch { value = '' }
+          // 宿主查不到键时会原样回键名，这种“命中”不算翻译成功。
+          if (value && value !== name) return composerFill(value, vars)
+        }
+        let active = ''
+        try {
+          const snapshot = found.service && typeof found.service.getSnapshot === 'function'
+            ? obj(found.service.getSnapshot())
+            : {}
+          active = text(snapshot.active)
+        } catch { active = '' }
+        const bucket = Object.hasOwn(COMPOSER_DICT, active) ? COMPOSER_DICT[active] : COMPOSER_DICT[composerFallbackLocale()]
+        const local = bucket && Object.hasOwn(bucket, name) ? bucket[name] : ''
+        return composerFill(text(local, name), vars)
+      }
+    }
+
+    /**
+     * 面板位置：输入条在页面底部，默认向上开；上方空间不足就向下翻转。
+     * 水平夹在视口内，可用高度一并返回，由面板自己 maxHeight + body overflow 裁剪。
+     */
+    function composerPlacement(rect) {
+      const viewportWidth = num(typeof window === 'undefined' ? 0 : window.innerWidth, PANEL_WIDTH + 16) || PANEL_WIDTH + 16
+      const viewportHeight = num(typeof window === 'undefined' ? 0 : window.innerHeight, 720) || 720
+      const width = Math.max(240, Math.min(PANEL_WIDTH, viewportWidth - 16))
+      const gap = 8
+      const edge = 8
+      const anchor = obj(rect)
+      const anchorTop = Number.isFinite(Number(anchor.top)) ? Number(anchor.top) : viewportHeight - 48
+      const anchorBottom = Number.isFinite(Number(anchor.bottom)) ? Number(anchor.bottom) : anchorTop + 28
+      const anchorLeft = Number.isFinite(Number(anchor.left)) ? Number(anchor.left) : edge
+      const spaceAbove = Math.max(anchorTop - gap - edge, 0)
+      const spaceBelow = Math.max(viewportHeight - anchorBottom - gap - edge, 0)
+      const above = spaceAbove >= 300 || spaceAbove >= spaceBelow
+      const height = Math.max(140, above ? spaceAbove : spaceBelow)
+      const left = Math.max(edge, Math.min(anchorLeft, Math.max(edge, viewportWidth - width - edge)))
+      const style = {
+        left: `${Math.round(left)}px`,
+        width: `${Math.round(width)}px`,
+        maxHeight: `${Math.round(height)}px`
+      }
+      if (above) style.bottom = `${Math.round(viewportHeight - anchorTop + gap)}px`
+      else style.top = `${Math.round(anchorBottom + gap)}px`
+      return style
+    }
+
+    /** portal：面板必须脱离输入条的 overflow 裁剪；拿不到 react-dom 时退化就地渲染。 */
+    function loadCreatePortal() {
+      try {
+        const dom = require('react-dom')
+        return dom && typeof dom.createPortal === 'function' ? dom.createPortal : null
+      } catch {
+        return null
+      }
+    }
+    const CREATE_PORTAL = loadCreatePortal()
+
+    /**
+     * 入口组件：28×28 图标按钮 + 非模态面板。
+     * owner 自带标准 props（useInput / inputActions / useProjection / useWorkspaces …），
+     * apply 再补 pdflowT / pdflowStartSession / pdflowPortal 三个闭包。
+     */
+    function PdFlowComposer(props) {
+      const input = props || {}
+      const t = typeof input.pdflowT === 'function' ? input.pdflowT : (key) => text(key)
+      const startSession = typeof input.pdflowStartSession === 'function' ? input.pdflowStartSession : null
+      const portal = typeof input.pdflowPortal === 'function' ? input.pdflowPortal : null
+
+      const [open, setOpen] = React.useState(false)
+      const [confirmOpen, setConfirmOpen] = React.useState(false)
+      const [placement, setPlacement] = React.useState(null)
+      const [footer, setFooter] = React.useState(null)
+      // 本次打开是否由键盘触发：只有键盘打开才抢焦点并做焦点圈定，鼠标打开保持原语义。
+      const [openedByKeyboard, setOpenedByKeyboard] = React.useState(false)
+      const buttonRef = React.useRef(null)
+      const panelRef = React.useRef(null)
+
+      // 顶层无条件调用：宿主缺 hook 时退化为无草稿，绝不让入口崩掉（崩溃会清空整个 slot）。
+      let inputState = null
+      try {
+        inputState = typeof input.useInput === 'function' ? input.useInput(SELECT_INPUT_STATE) : null
+      } catch {
+        inputState = null
+      }
+      const draft = text(obj(inputState).draft)
+      const phase = text(obj(inputState).phase, 'plain')
+      const actions = obj(input.inputActions)
+
+      // 绑定判定：agentPreset 投影取不到就按 unknown 处理，绝不冒充已启用。
+      let preset
+      let presetKnown = false
+      try {
+        if (typeof input.useProjection === 'function') {
+          preset = input.useProjection('agentPreset')
+          presetKnown = typeof preset === 'string' || preset === null
+        }
+      } catch {
+        preset = undefined
+        presetKnown = false
+      }
+      const bound = presetKnown === true && text(preset) === COMPOSER_PRESET
+
+      let workspaceId = ''
+      try {
+        const snapshot = typeof input.useWorkspaces === 'function' ? input.useWorkspaces(SELECT_SNAPSHOT) : null
+        const hit = pickWorkspace(snapshot)
+        workspaceId = text(hit && (hit.workspaceId || hit.id))
+      } catch {
+        workspaceId = ''
+      }
+
+      // 当前会话是否仍是“没跑过 turn 的空白会话”：blank 会被 connectWorkspace 解析复用。
+      // 新建流程会话必须按它分支，否则宿主换 preset 保留的原草稿会被 append 再写一遍。
+      // useSession 缺失（旧宿主）时按非 blank 处理，保持原有 append 行为。
+      let isBlank = false
+      try {
+        isBlank = typeof input.useSession === 'function' ? input.useSession(SELECT_SESSION_BLANK) === true : false
+      } catch {
+        isBlank = false
+      }
+
+      const place = React.useCallback(() => {
+        let rect = null
+        try {
+          const node = buttonRef.current
+          rect = node && typeof node.getBoundingClientRect === 'function' ? node.getBoundingClientRect() : null
+        } catch { rect = null }
+        try {
+          setPlacement(composerPlacement(rect))
+        } catch { /* 位置算不出来就保持上一次的 */ }
+      }, [])
+
+      const close = React.useCallback((refocus) => {
+        setConfirmOpen(false)
+        setOpen(false)
+        setFooter(null)
+        if (refocus === true) {
+          try {
+            const node = buttonRef.current
+            if (node && typeof node.focus === 'function') node.focus()
+          } catch { /* 忽略 */ }
+        }
+      }, [])
+
+      // 打开期间跟随视口重算位置，并监听 Esc / 点外部 / Tab。
+      React.useEffect(() => {
+        if (open !== true) return undefined
+        if (typeof window === 'undefined' || typeof document === 'undefined') return undefined
+        place()
+        const onViewport = () => place()
+        const onPointerDown = (event) => {
+          const target = event && event.target
+          const panel = panelRef.current
+          const button = buttonRef.current
+          if (panel && typeof panel.contains === 'function' && panel.contains(target)) return
+          if (button && typeof button.contains === 'function' && button.contains(target)) return
+          // 点外部只关闭不回焦：回焦等于把焦点从编辑器手里抢走，下一次插入就失效。
+          close(false)
+        }
+        const onKeyDown = (event) => {
+          if (!event) return
+          if (event.key === 'Escape') { close(true); return }
+          if (event.key !== 'Tab') return
+          // 鼠标打开的面板不拦 Tab：焦点本来就在输入框，用户随时可以离开。
+          if (openedByKeyboard !== true) return
+          const panel = panelRef.current
+          if (!panel || typeof panel.querySelectorAll !== 'function') return
+          // 键盘打开后面板是焦点圈：Tab / Shift+Tab 只在首个与末个可获得焦点元素之间循环。
+          const nodes = panel.querySelectorAll('button:not([disabled]), [href], [tabindex]:not([tabindex="-1"])')
+          const list = Array.prototype.slice.call(nodes)
+          if (list.length === 0) return
+          const first = list[0]
+          const last = list[list.length - 1]
+          let active = null
+          try { active = typeof document === 'undefined' ? null : document.activeElement } catch { active = null }
+          const inside = active && typeof panel.contains === 'function' ? panel.contains(active) : false
+          if (event.shiftKey === true) {
+            // 在第一个上反向 Tab，或焦点已漏到面板外：从最后一个接上。
+            if (inside !== true || active === first) {
+              if (typeof event.preventDefault === 'function') event.preventDefault()
+              if (typeof last.focus === 'function') last.focus()
+            }
+            return
+          }
+          // 在最后一个上正向 Tab，或焦点已漏到面板外：从第一个接上。
+          if (inside !== true || active === last) {
+            if (typeof event.preventDefault === 'function') event.preventDefault()
+            if (typeof first.focus === 'function') first.focus()
+          }
+        }
+        window.addEventListener('resize', onViewport)
+        document.addEventListener('scroll', onViewport, true)
+        document.addEventListener('pointerdown', onPointerDown, true)
+        document.addEventListener('keydown', onKeyDown, true)
+        return () => {
+          window.removeEventListener('resize', onViewport)
+          document.removeEventListener('scroll', onViewport, true)
+          document.removeEventListener('pointerdown', onPointerDown, true)
+          document.removeEventListener('keydown', onKeyDown, true)
+        }
+      }, [open, place, close, openedByKeyboard])
+
+      // 键盘打开后把焦点送进面板（DOM 顺序第一个 button，即右上角关闭键）。
+      // 鼠标打开不动焦点：草稿选区、引用芯片都留在编辑器里。
+      React.useEffect(() => {
+        if (open !== true || openedByKeyboard !== true) return
+        const panel = panelRef.current
+        if (!panel || typeof panel.querySelector !== 'function') return
+        const target = panel.querySelector('button')
+        if (target && typeof target.focus === 'function') {
+          try { target.focus() } catch { /* 忽略：焦点失败不影响面板可用 */ }
+        }
+      }, [open, openedByKeyboard])
+
+      // 面板打开时一旦进入提交/发送就静默收起（不回焦，避开提交瞬间）。
+      React.useEffect(() => {
+        if (open !== true) return
+        if (COMPOSER_CLOSE_PHASES.includes(phase)) close(false)
+      }, [open, phase, close])
+
+      const setFooterText = (kind, value) => {
+        try { setFooter({ kind, text: text(value) }) } catch { /* 忽略 */ }
+      }
+
+      /**
+       * 插入阶段命令：技能命令必须落在“消息首行且以 / 开头”。
+       * 空草稿 → 首行插 `/stage `；非空且不以 / 开头 → 0 处插 `/stage\n`，原文本整体后移；
+       * 已以 / 开头 → 不插，只提示清空。只用 captureInsertion / insertText，非空草稿绝不 setDraft。
+       */
+      const insertStage = (command) => {
+        const name = text(command)
+        if (!name) return
+        const capture = typeof actions.captureInsertion === 'function' ? actions.captureInsertion : null
+        const insert = typeof actions.insertText === 'function' ? actions.insertText : null
+        if (!capture || !insert) { setFooterText('warn', t('footer.noInput')); return }
+        const body = text(draft)
+        if (body.trimStart().startsWith('/')) { setFooterText('warn', t('footer.hasCommand')); return }
+        let span = null
+        try { span = obj(capture()) } catch { span = null }
+        // insertText 是 CAS：span 必须带上当前 draftRev，否则宿主直接拒绝。
+        if (typeof span.draftRev !== 'number') { setFooterText('warn', t('footer.failed')); return }
+        const injected = body.trim() === '' ? `${name} ` : `${name}\n`
+        const target = { start: 0, end: 0, draftRev: span.draftRev }
+        const settle = (outcome) => {
+          if (outcome === false) setFooterText('warn', t('footer.failed'))
+          else setFooterText('ok', t('footer.inserted', { cmd: name }))
+        }
+        let outcome
+        try { outcome = insert(injected, target) } catch { outcome = false }
+        if (outcome && typeof outcome.then === 'function') {
+          // 异步插入：拒绝结果留成 footer 提示，等用户自己再点。
+          outcome.then(settle).catch(() => settle(false))
+          return
+        }
+        settle(outcome)
+      }
+
+      /**
+       * 新建会话：只在“非 blank 且草稿非空”时把草稿预置进新会话（whenDraftExists=append）。
+       * blank 会话会被 connectWorkspace 解析回当前会话：宿主换 preset 时会保留原草稿，
+       * 再传 prompt 就是同一段文字接一遍，用户会看到草稿重复。因此 blank（以及草稿为空）
+       * 只传 agentPreset。全程绝不 submit。
+       */
+      const createSession = () => {
+        setConfirmOpen(false)
+        if (!startSession) { setFooterText('warn', t('footer.newFail', { message: t('footer.noWorkspace') })); return }
+        const fail = (error) => setFooterText('warn', t('footer.newFail', { message: text(error && error.message, t('common.unknownError')) }))
+        // 成功才收面板：失败要留在原地，否则 footer 的失败原因谁也看不到。
+        const done = () => setOpen(false)
+        const body = text(draft)
+        const options = { agentPreset: COMPOSER_PRESET }
+        if (isBlank !== true && body !== '') {
+          options.prompt = body
+          options.whenDraftExists = 'append'
+        }
+        let outcome
+        try {
+          outcome = startSession(workspaceId || undefined, options)
+        } catch (error) {
+          fail(error)
+          return
+        }
+        if (outcome && typeof outcome.then === 'function') {
+          outcome.then(done, fail)
+          return
+        }
+        done()
+      }
+
+      const statusKey = presetKnown !== true ? 'status.unknown' : (bound ? 'status.on' : 'status.off')
+      const stageDisabled = bound !== true
+
+      const stageRows = COMPOSER_STAGES.map((stage) => h('button', {
+        key: stage.id,
+        type: 'button',
+        className: 'pdflow-row',
+        disabled: stageDisabled,
+        'data-stage': stage.id,
+        title: stageDisabled ? t('stages.disabled') : stage.command,
+        onPointerDown: keepPointerFocus,
+        onClick: () => { if (!stageDisabled) insertStage(stage.command) }
+      },
+        h('span', { className: 'pdflow-rowname' }, t(stage.key)),
+        stage.manual ? h('span', { className: 'pdflow-rowtag' }, t('stages.manual')) : null,
+        h('span', { className: 'pdflow-cmd' }, stage.command)))
+
+      const panel = h('div', {
+        className: 'pdflow-panel',
+        ref: panelRef,
+        role: 'dialog',
+        'aria-modal': 'false',
+        'aria-label': t('a11y.panel'),
+        style: placement || composerPlacement(null)
+      },
+        h('div', { className: 'pdflow-head' },
+          h('div', { className: 'pdflow-htext' },
+            h('div', { className: 'pdflow-title' }, t('title')),
+            h('div', {
+              className: 'pdflow-status',
+              'data-on': bound ? 'true' : 'false',
+              'data-unknown': presetKnown === true ? 'false' : 'true'
+            }, t(statusKey))),
+          h('button', {
+            type: 'button',
+            className: 'pdflow-x',
+            'aria-label': t('close'),
+            title: t('close'),
+            onPointerDown: keepPointerFocus,
+            onClick: () => close(true)
+          }, '✕')),
+        h('div', { className: 'pdflow-body' },
+          h('div', { className: 'pdflow-sec' },
+            h('button', {
+              type: 'button',
+              className: 'pdflow-newbt',
+              'aria-expanded': confirmOpen ? 'true' : 'false',
+              onPointerDown: keepPointerFocus,
+              onClick: () => setConfirmOpen(confirmOpen !== true)
+            }, t(isBlank === true ? 'new.row.keep' : 'new.row')),
+            h('div', { className: 'pdflow-note' }, t(isBlank === true ? 'new.note.keep' : 'new.note.copy')),
+            confirmOpen === true
+              ? h('div', { className: 'pdflow-confirm' },
+                  h('span', { className: 'pdflow-confirm-q' }, t(isBlank === true ? 'new.confirm.keep' : 'new.confirm')),
+                  h('button', {
+                    type: 'button',
+                    className: 'pdflow-btn',
+                    onPointerDown: keepPointerFocus,
+                    onClick: () => setConfirmOpen(false)
+                  }, t('new.cancel')),
+                  h('button', {
+                    type: 'button',
+                    className: 'pdflow-btn',
+                    'data-primary': 'true',
+                    onPointerDown: keepPointerFocus,
+                    onClick: createSession
+                  }, t(isBlank === true ? 'new.create.keep' : 'new.create')))
+              : null),
+          h('div', { className: 'pdflow-sec' },
+            h('div', { className: 'pdflow-sechead' }, t('stages.title')),
+            stageRows,
+            stageDisabled
+              ? h('div', { className: 'pdflow-note', 'data-warn': 'true' }, t('stages.disabled'))
+              : null)),
+        h('div', {
+          className: 'pdflow-foot',
+          'data-kind': footer ? text(footer.kind) : 'hint'
+        }, footer ? text(footer.text) : t('footer.default')))
+
+      return h('div', { className: 'pdflow-anchor' },
+        h('button', {
+          ref: buttonRef,
+          type: 'button',
+          className: 'pdflow-entry',
+          'data-on': open ? 'true' : 'false',
+          'aria-haspopup': 'dialog',
+          'aria-expanded': open ? 'true' : 'false',
+          'aria-label': t('a11y.open'),
+          title: t('entry'),
+          onPointerDown: keepPointerFocus,
+          onClick: (event) => {
+            if (open === true) { close(false); return }
+            // 键盘（Enter / Space）触发的 click 其 detail 为 0；只有这种打开才抢焦点并做焦点圈定。
+            const byKeyboard = Boolean(event && event.detail === 0)
+            place()
+            setFooter(null)
+            setOpenedByKeyboard(byKeyboard)
+            setOpen(true)
+          }
+        }, h(FlowGlyph, { size: 16 })),
+        open === true
+          ? (portal && typeof document !== 'undefined' && document.body ? portal(panel, document.body) : panel)
+          : null)
+    }
+
     function RowIcon(owner) {
       const size = (owner && owner.size) || 16
       return h('svg', { width: size, height: size, viewBox: '0 0 16 16', 'aria-hidden': 'true' },
@@ -1233,9 +1849,12 @@ window.__ModuleLoader__.load({
       ctx.inject(['layout'], (scoped) => { layout = (scoped && scoped.layout) || null })
 
       // 宿主自带的目录选择器：uiWorkspace.pickDirectory()（Service 目录实测存在）。
+      // 同一份 Service 也用于 startSession：新建流程会话时只预置草稿，不发送。
       let pickDirectory = null
+      let workspaceService = null
       ctx.inject(['uiWorkspace'], (scoped) => {
         const workspace = scoped && scoped.uiWorkspace
+        workspaceService = workspace || null
         if (workspace && typeof workspace.pickDirectory === 'function') pickDirectory = () => workspace.pickDirectory()
       })
 
@@ -1256,6 +1875,75 @@ window.__ModuleLoader__.load({
           if (typeof offPanel === 'function') offPanel()
         }
       })
+
+      /* ---------------------- 会话输入框入口 ---------------------- */
+      const composerT = makeComposerTranslator(ctx)
+
+      // 字典：locale 服务不在就什么都不注册，组件自动走本地回退字典。
+      ctx.effect(() => {
+        try {
+          const locale = ctx.get('locale')
+          if (locale && typeof locale.register === 'function') {
+            return locale.register(COMPOSER_NS, COMPOSER_DICT)
+          }
+        } catch { /* 忽略：回退本地字典 */ }
+        return undefined
+      }, 'project-dev-flow: composer copy')
+
+      // 样式：幂等注入（同 id 已存在就复用），卸载只清理自己创建的那一份。
+      ctx.effect(() => {
+        let node = null
+        let created = false
+        try {
+          if (typeof document !== 'undefined' && document && document.head) {
+            const existing = typeof document.getElementById === 'function' ? document.getElementById(COMPOSER_STYLE_ID) : null
+            if (existing) {
+              node = existing
+            } else {
+              node = document.createElement('style')
+              node.id = COMPOSER_STYLE_ID
+              node.textContent = COMPOSER_STYLES
+              document.head.appendChild(node)
+              created = true
+            }
+          }
+        } catch { node = null; created = false }
+        return () => {
+          try {
+            if (created && node && node.parentNode) node.parentNode.removeChild(node)
+          } catch { /* 忽略 */ }
+        }
+      }, 'project-dev-flow: composer styles')
+
+      // 入口注册：插槽可能不存在（旧宿主），inject 与 register 全部 try/catch。
+      ctx.effect(() => {
+        const startSession = (targetWorkspaceId, options) => {
+          const service = workspaceService
+          // 抛出的消息走 locale 键，footer 翻译后再展示，组件里不留中文。
+          if (!service || typeof service.startSession !== 'function') throw new Error(composerT('footer.noWorkspace'))
+          return service.startSession(targetWorkspaceId, options)
+        }
+        let stop = null
+        try {
+          stop = ctx.slots.inject(COMPOSER_SLOT, () => ctx.slots.register({
+            name: COMPOSER_SLOT,
+            id: 'project-dev-flow',
+            order: 20,
+            // label 用 thunk：每次投影重读，语言切换后不必重新注册。
+            label: () => composerT('entry')
+          }, (owner) => h(PdFlowComposer, {
+            ...(owner || {}),
+            pdflowT: composerT,
+            pdflowStartSession: startSession,
+            pdflowPortal: CREATE_PORTAL
+          })))
+        } catch { stop = null }
+        return () => {
+          try {
+            if (typeof stop === 'function') stop()
+          } catch { /* 忽略 */ }
+        }
+      }, 'project-dev-flow: composer entry')
     }
 
     exports.apply = apply
